@@ -124,4 +124,4 @@ description, logs = generate_description(title, category, event_type, tone, cont
 - Quality consistency: Advanced prompt engineering ensures reliable output
 - Scalability: Stateless design for horizontal scaling
 
-Built by Ash
+
