@@ -1,4 +1,4 @@
-# EC - Title & Desc Gen
+# Title & Desc Gen
 
 Professional event title and description generator using GPT-3.5-turbo with advanced prompt engineering, cost optimization, and comprehensive testing capabilities.
 
