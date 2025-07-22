@@ -48,7 +48,7 @@ def estimate_cost(prompt_tokens, completion_tokens):
     return input_cost + output_cost
 
 def count_tokens(text):
-    return len(text.split())
+    return max(len(text.split()), int(len(text) / 3.5))
 
 def fuzzy_correct(user_input, valid_options):
     matches = get_close_matches(user_input, valid_options, n=1, cutoff=0.75)
@@ -205,28 +205,27 @@ def generate_description(title, category, event_type, tone, context=None, max_ch
     max_chars = max(100, min(int(max_chars), 2000))
     
     if cost_mode == "economy":
-        system_msg = f"Write compelling {tone.lower()} description for '{title}' - {category} {event_type}. ~{max_chars} chars. Include benefits and call-to-action."
-        user_msg = f"Description for: {title} ({category} {event_type}, {tone})"
-        max_tokens = int(max_chars/3)
+        system_msg = f"Write compelling {tone.lower()} description for '{title}' - {category} {event_type}. EXACTLY {max_chars} characters. Include benefits and call-to-action. Use all available space."
+        user_msg = f"Description for: {title} ({category} {event_type}, {tone}) (MUST be {max_chars} characters)"
+        max_tokens = int(max_chars/2.8) + 50
         temperature = 0.7
     elif cost_mode == "premium":
         context_str = f" Focus: {context}" if context else ""
-        system_msg = f"""Expert copywriter. Write compelling {max_chars}-char description for '{title}' - {tone.lower()} {event_type} in {category}.
+        system_msg = f"""Expert copywriter. Write compelling {max_chars}-character description for '{title}' - {tone.lower()} {event_type} in {category}.
 Structure: Hook → Problem → Solution → Benefits → CTA
-Tone: {tone.lower()}, persuasive, action-oriented{context_str}"""
-        
-        user_msg = f"Write description for '{title}' ({category} {event_type}, {tone}). Target: {max_chars} chars{context_str}"
-        max_tokens = int(max_chars/1.8)
+Tone: {tone.lower()}, persuasive, action-oriented
+TARGET: Use the full {max_chars} characters available. Do not stop early.{context_str}"""
+        user_msg = f"Write description for '{title}' ({category} {event_type}, {tone}). MUST be as close as possible to {max_chars} characters."
+        max_tokens = int(max_chars/2.5) + 100
         temperature = 0.75
     else:  # balanced
         context_str = f" Focus: {context}" if context else ""
         system_msg = f"""Professional copywriter. Create engaging {tone.lower()} description for '{title}' - {category} {event_type}.
-Length: ~{max_chars} characters
+Length: EXACTLY {max_chars} characters (use all available space, do not stop early)
 Include: value proposition, benefits, call-to-action
 Style: {tone.lower()}, compelling{context_str}"""
-        
-        user_msg = f"Write description: '{title}' ({category} {event_type}, {tone}){context_str}"
-        max_tokens = int(max_chars/2.2)
+        user_msg = f"Write description: '{title}' ({category} {event_type}, {tone}). Target {max_chars} chars. Use all available space." + (f" {context_str}" if context_str else "")
+        max_tokens = int(max_chars/2.6) + 75
         temperature = 0.72
     
     start = time.time()
@@ -248,6 +247,26 @@ Style: {tone.lower()}, compelling{context_str}"""
         description = response.choices[0].message.content.strip()
         logger.info(f"Generated description length: {len(description)} chars")
         
+        # If description is significantly shorter than requested, try to extend it
+        if len(description) < int(0.75 * max_chars) and cost_mode != "economy":
+            remaining_chars = max_chars - len(description)
+            logger.info(f"Description too short ({len(description)}/{max_chars}), extending by ~{remaining_chars} chars")
+            
+            extend_response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": f"You are extending an event description. Add {remaining_chars} more characters to make it more detailed and compelling."},
+                    {"role": "user", "content": f"Current description: {description}\n\nExpand this by adding more details, benefits, or call-to-action to reach closer to {max_chars} total characters."}
+                ],
+                max_tokens=int(remaining_chars/2.5) + 30,
+                temperature=temperature
+            )
+            
+            extension = extend_response.choices[0].message.content.strip()
+            if extension and not extension.lower().startswith(description.lower()[:20]):
+                description = description + " " + extension
+                logger.info(f"Extended description to {len(description)} chars")
+        
     except Exception as e:
         logger.error(f"API call failed: {e}")
         return "", {"error": str(e)}
@@ -262,6 +281,8 @@ Style: {tone.lower()}, compelling{context_str}"""
     
     char_efficiency = len(description) / cost if cost > 0 else 0
     
+    description = description[:max_chars]
+    
     logs = {
         "Prompt tokens": prompt_tokens,
         "Completion tokens": completion_tokens,
@@ -272,10 +293,16 @@ Style: {tone.lower()}, compelling{context_str}"""
         "Char efficiency": round(char_efficiency, 2),
         "Target utilization": f"{len(description)/max_chars*100:.1f}%",
         "Cost mode": cost_mode,
-        "Shorter than requested": too_short
+        "Shorter than requested": too_short,
+        # For regeneration
+        "category": category,
+        "event_type": event_type,
+        "tone": tone,
+        "context": context,
+        "max_chars": max_chars
     }
     
-    return description[:max_chars], logs
+    return description, logs
 
 def run_comprehensive_tests():
     test_cases = [

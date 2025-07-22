@@ -172,50 +172,6 @@ with st.sidebar:
             
             st.divider()
     
-    if st.session_state.desc_logs:
-        desc_btn_style = """
-        <style>
-        div.stButton > button:nth-child(1) {
-            background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            padding: 0.5rem 1rem;
-            font-weight: 600;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
-        }
-        </style>
-        """
-        st.markdown(desc_btn_style, unsafe_allow_html=True)
-        
-        if st.button("View Description Generation Analytics", key="desc_logs_btn", use_container_width=True):
-            st.session_state.show_desc_logs = not st.session_state.show_desc_logs
-        
-        if st.session_state.show_desc_logs:
-            st.markdown("### Description Generation Analytics")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("Prompt Tokens", st.session_state.desc_logs['Prompt tokens'])
-                st.metric("Total Tokens", st.session_state.desc_logs['Total tokens'])
-            with col2:
-                st.metric("Completion Tokens", st.session_state.desc_logs['Completion tokens'])
-                st.metric("Generation Time", f"{st.session_state.desc_logs['Time taken (s)']}s")
-            
-            st.metric("Cost", st.session_state.desc_logs['Estimated cost ($)'])
-            
-            if st.session_state.description:
-                desc_length = len(st.session_state.description)
-                words = len(st.session_state.description.split())
-                char_per_token_ratio = desc_length / st.session_state.desc_logs['Completion tokens'] if st.session_state.desc_logs['Completion tokens'] > 0 else 0
-                
-                st.metric("Characters Generated", desc_length)
-                st.metric("Word Count", words)
-                st.metric("Chars per Token", f"{char_per_token_ratio:.2f}")
-            
-            st.divider()
-    
     if not st.session_state.title_logs and not st.session_state.desc_logs:
         st.info("Generate content to view detailed analytics here.")
 
@@ -454,35 +410,32 @@ if st.session_state.description:
     st.markdown("### Generated Description:")
     st.markdown(f'<div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #28a745; color: #333;">{st.session_state.description}</div>', unsafe_allow_html=True)
     st.info(f"Description length: {len(st.session_state.description)} characters")
-    
+
+    # Character utilization progress bar
+    if st.session_state.desc_logs:
+        utilization = len(st.session_state.description) / int(st.session_state.desc_logs.get('Target utilization', '100').replace('%','')) * 100
+        st.progress(min(int(utilization), 100), text=f"Character Utilization: {len(st.session_state.description)}/{int(st.session_state.desc_logs.get('Target utilization', '100').replace('%',''))}")
+
     if st.session_state.desc_logs and st.session_state.desc_logs.get("Shorter than requested"):
         st.warning("Description is shorter than requested. Try increasing the length or re-generating.")
-    
+        if st.button("Regenerate Description", key="regenerate_desc_btn"):
+            # Re-run the last description generation with same params
+            description, logs = generate_description(
+                st.session_state.final_title,
+                st.session_state.desc_logs.get('category', ''),
+                st.session_state.desc_logs.get('event_type', ''),
+                st.session_state.desc_logs.get('tone', ''),
+                st.session_state.desc_logs.get('context', None),
+                st.session_state.desc_logs.get('max_chars', 2000),
+                st.session_state.desc_logs.get('Cost mode', 'balanced')
+            )
+            st.session_state.description = description
+            st.session_state.desc_logs = logs
+
+    # Description analytics button and display (only in main area)
     if st.session_state.desc_logs:
-        desc_analytics_style = """
-        <style>
-        div.stButton > button[key="desc_analytics_btn"] {
-            background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            padding: 0.75rem 1.5rem;
-            font-weight: 600;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
-            margin-top: 1rem;
-        }
-        div.stButton > button[key="desc_analytics_btn"]:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-        }
-        </style>
-        """
-        st.markdown(desc_analytics_style, unsafe_allow_html=True)
-        
         if st.button("View Description Generation Analytics", key="desc_analytics_btn", use_container_width=True):
             st.markdown("### Description Generation Analytics")
-            
             col1, col2 = st.columns(2)
             with col1:
                 st.metric("Prompt Tokens", st.session_state.desc_logs['Prompt tokens'])
@@ -490,14 +443,11 @@ if st.session_state.description:
             with col2:
                 st.metric("Completion Tokens", st.session_state.desc_logs['Completion tokens'])
                 st.metric("Generation Time", f"{st.session_state.desc_logs['Time taken (s)']}s")
-            
             st.metric("Cost", st.session_state.desc_logs['Estimated cost ($)'])
-            
             if st.session_state.description:
                 desc_length = len(st.session_state.description)
                 words = len(st.session_state.description.split())
                 char_per_token_ratio = desc_length / st.session_state.desc_logs['Completion tokens'] if st.session_state.desc_logs['Completion tokens'] > 0 else 0
-                
                 col3, col4 = st.columns(2)
                 with col3:
                     st.metric("Characters Generated", desc_length)
