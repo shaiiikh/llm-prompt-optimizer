@@ -1,11 +1,10 @@
-from openai import OpenAI
 import json
 import os
 import time
 from dotenv import load_dotenv
 from difflib import get_close_matches
-import logging
 import streamlit as st
+from openai import OpenAI
 
 load_dotenv()
 
@@ -28,9 +27,6 @@ if not API_KEY:
         raise ValueError("OpenAI API key not found. Please set OPENAI_API_KEY environment variable or add to Streamlit secrets.")
 
 client = OpenAI(api_key=API_KEY)
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 def clean_json_output(raw):
     raw = raw.strip()
@@ -64,76 +60,68 @@ def get_title_examples(category, event_type, tone):
         ("Business", "Seminar", "Formal"): ["Executive Mastery Series", "Strategic Leadership Institute", "Business Excellence Summit"],
         ("Education", "Conference", "Innovative"): ["Learning Revolution Summit", "Educational Innovation Forum", "Teaching Excellence Expo"]
     }
-    
     key = (category, event_type, tone)
     if key in examples:
         return examples[key]
-    
     return [f"{category} Excellence Summit", f"{event_type} Innovation Forum", f"Advanced {category} Workshop"]
 
 def validate_inputs(category, event_type, tone, num_titles=3, context=None):
     errors = []
     warnings = []
-    
     if not category or category == "Select event category":
         errors.append("Category is required")
     if not event_type or event_type == "Select event type":
         errors.append("Event type is required")
     if not tone or tone == "Select tone of event":
         errors.append("Tone is required")
-    
     if num_titles < 1 or num_titles > 5:
         warnings.append(f"Number of titles ({num_titles}) should be between 1-5")
-    
     if context and len(context) > 200:
         warnings.append("Context is very long - may increase costs")
-    
-    logger.info(f"Input validation - Errors: {len(errors)}, Warnings: {len(warnings)}")
     return errors, warnings
 
 def generate_titles(category, event_type, tone, num_titles=5, context=None, cost_mode="balanced"):
-    logger.info(f"Generating titles: {category}/{event_type}/{tone}, count={num_titles}, mode={cost_mode}")
-    
     errors, warnings = validate_inputs(category, event_type, tone, num_titles, context)
     if errors:
         return [], {"errors": errors, "warnings": warnings}
     
     num_titles = max(1, min(int(num_titles), 5))
-    
+    diversity_instruction = "Each title must be unique, creative, and use different wording. Avoid repeating phrases or structures."
     if cost_mode == "economy":
-        system_msg = f"Generate {num_titles} creative {tone.lower()} event titles for {category} {event_type}. 3-6 words each, no colons. JSON format."
-        user_msg = f"Create {num_titles} titles for {category} {event_type} ({tone})"
-        max_tokens = 8 * num_titles + 20
-        temperature = 0.7
+        system_msg = f"Generate {num_titles} creative, unique {tone.lower()} event titles for {category} {event_type}. 3-6 words each, no colons. JSON format. {diversity_instruction}"
+        user_msg = f"Create {num_titles} unique, creative titles for {category} {event_type} ({tone})"
+        max_tokens = 12 * num_titles + 30  # Slightly higher for more creativity
+        temperature = 0.85
     elif cost_mode == "premium":
+        # More few-shot examples for diversity
         examples = get_title_examples(category, event_type, tone)
-        examples_str = ", ".join(examples[:2])
+        example_block = "\n".join([
+            "[\"Innovate Now Summit\", \"Future Leaders Forum\", \"Tech Vision Expo\"]",
+            "[\"Business Growth Bootcamp\", \"Leadership Mastery Workshop\", \"Strategic Success Seminar\"]",
+            "[\"Learning Revolution Conference\", \"Education Innovation Forum\", \"Teaching Excellence Expo\"]"
+        ])
         context_str = f" Context: {context}" if context else ""
-        
         system_msg = f"""Expert event marketer. Generate {num_titles} compelling {tone.lower()} titles for {category} {event_type}.
-Requirements: 3-6 words, memorable, actionable. Examples: {examples_str}
-Format: JSON array{context_str}"""
-        
-        user_msg = f"Generate {num_titles} exceptional titles for {category} {event_type} with {tone} tone{context_str}"
+Requirements: 3-6 words, memorable, actionable. Each title must be unique and use different words or focus. Avoid repeating phrases or structures.
+Format: JSON array
+Diverse Example Sets:\n{example_block}{context_str}"""
+        user_msg = f"Generate {num_titles} exceptional, unique titles for {category} {event_type} with {tone} tone{context_str}"
         max_tokens = 15 * num_titles + 50
-        temperature = 0.8
+        temperature = 0.85
     else:  # balanced
         examples = get_title_examples(category, event_type, tone)
         context_str = f" Focus: {context}" if context else ""
-        
         system_msg = f"""Professional event title generator. Create {num_titles} {tone.lower()} titles for {category} {event_type}.
 - Length: 3-6 words
 - Style: {tone.lower()}, memorable
 - Format: JSON array
+- Each title must be unique and use different words or focus. Avoid repeating phrases or structures.
 Examples: {examples[0]}, {examples[1]}{context_str}"""
-        
-        user_msg = f"Generate {num_titles} titles: {category} {event_type} ({tone}){context_str}"
+        user_msg = f"Generate {num_titles} unique titles: {category} {event_type} ({tone}){context_str}"
         max_tokens = 12 * num_titles + 30
-        temperature = 0.75
-    
+        temperature = 0.8
     start = time.time()
-    
-    try:
+    def call_llm(system_msg, user_msg, max_tokens, temperature):
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -146,24 +134,16 @@ Examples: {examples[0]}, {examples[1]}{context_str}"""
             frequency_penalty=0.5,
             presence_penalty=0.3
         )
-        
-        result = response.choices[0].message.content.strip()
-        logger.info(f"Raw response length: {len(result)} chars")
-        
-    except Exception as e:
-        logger.error(f"API call failed: {e}")
-        return [], {"error": str(e)}
-    
+        return response.choices[0].message.content.strip()
+    result = call_llm(system_msg, user_msg, max_tokens, temperature)
     cleaned = clean_json_output(result)
     titles = []
-    
     try:
         parsed = json.loads(cleaned)
         if isinstance(parsed, list):
             titles = [str(t).strip() for t in parsed if isinstance(t, str) and t.strip()]
             titles = [t for t in titles if 3 <= len(t.split()) <= 6]
     except Exception as e:
-        logger.warning(f"JSON parsing failed: {e}, attempting fallback")
         lines = result.replace('[', '').replace(']', '').replace('"', '').split(',')
         for line in lines:
             clean = line.strip().strip('"').strip("'").strip('-').strip('1234567890.').strip()
@@ -171,37 +151,66 @@ Examples: {examples[0]}, {examples[1]}{context_str}"""
                 titles.append(clean)
                 if len(titles) >= num_titles:
                     break
-    
-    if len(titles) < num_titles:
-        for i in range(len(titles), num_titles):
-            titles.append(f"Premium {category} {event_type}")
-    
+    # Post-process: ensure all titles are unique
+    seen = set()
+    unique_titles = []
+    for t in titles:
+        if t.lower() not in seen:
+            unique_titles.append(t)
+            seen.add(t.lower())
+    titles = unique_titles[:num_titles]
+    # If still not enough, retry once with higher randomness (economy mode only)
+    if cost_mode == "economy" and len(titles) < num_titles:
+        result2 = call_llm(system_msg, user_msg, max_tokens + 20, 0.95)
+        cleaned2 = clean_json_output(result2)
+        try:
+            parsed2 = json.loads(cleaned2)
+            if isinstance(parsed2, list):
+                for t in parsed2:
+                    t = str(t).strip()
+                    if t and 3 <= len(t.split()) <= 6 and t.lower() not in seen:
+                        titles.append(t)
+                        seen.add(t.lower())
+                        if len(titles) >= num_titles:
+                            break
+        except Exception as e:
+            pass
+    titles = titles[:num_titles]
+    # If still not enough, fill with generic but relevant titles
+    fallback_used = False
+    i = 1
+    while len(titles) < num_titles:
+        filler = f"{category} {event_type} Title {i}"
+        if filler.lower() not in seen:
+            titles.append(filler)
+            seen.add(filler.lower())
+            fallback_used = True
+        i += 1
+    warning = None
+    if fallback_used:
+        warning = f"Some titles are generic due to LLM output limits in {cost_mode} mode. Try balanced or premium for more creative results."
     end = time.time()
     prompt_tokens = count_tokens(system_msg) + count_tokens(user_msg)
     completion_tokens = count_tokens(result)
     total_tokens = prompt_tokens + completion_tokens
     cost = estimate_cost(prompt_tokens, completion_tokens)
-    
     efficiency_score = len(titles) / cost if cost > 0 else 0
-    
     logs = {
         "Prompt tokens": prompt_tokens,
         "Completion tokens": completion_tokens,
         "Total tokens": total_tokens,
         "Time taken (s)": round(end - start, 2),
         "Estimated cost ($)": f"${cost:.5f}",
-        "Cost per title": f"${cost/len(titles):.6f}" if titles else "$0",
-        "Efficiency score": round(efficiency_score * 1000, 2),
-        "Cost mode": cost_mode,
-        "Warnings": warnings
+        "Efficiency score": round(efficiency_score, 2),
+        "Model": "gpt-3.5-turbo",
+        "System prompt": system_msg,
+        "User prompt": user_msg
     }
-    
-    logger.info(f"Generated {len(titles)} titles, cost: ${cost:.5f}")
-    return titles[:num_titles], logs
+    if warning:
+        logs["Warnings"] = warning
+    return titles, logs
 
 def generate_description(title, category, event_type, tone, context=None, max_chars=2000, cost_mode="balanced"):
-    logger.info(f"Generating description: {title}, mode={cost_mode}, max_chars={max_chars}")
-    
     max_chars = max(100, min(int(max_chars), 2000))
     
     end_instruction = "Do not stop until you reach the character limit. End with a strong call-to-action. Avoid repeating phrases. Use varied sentence structures."
@@ -247,12 +256,10 @@ Style: {tone.lower()}, compelling{context_str}
         )
         
         description = response.choices[0].message.content.strip()
-        logger.info(f"Generated description length: {len(description)} chars")
         
         # If description is significantly shorter than requested, try to extend it
         if len(description) < int(0.75 * max_chars) and cost_mode != "economy":
             remaining_chars = max_chars - len(description)
-            logger.info(f"Description too short ({len(description)}/{max_chars}), extending by ~{remaining_chars} chars")
             
             extend_response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
@@ -267,10 +274,8 @@ Style: {tone.lower()}, compelling{context_str}
             extension = extend_response.choices[0].message.content.strip()
             if extension and not extension.lower().startswith(description.lower()[:20]):
                 description = description + " " + extension
-                logger.info(f"Extended description to {len(description)} chars")
         
     except Exception as e:
-        logger.error(f"API call failed: {e}")
         return "", {"error": str(e)}
     
     end = time.time()
@@ -337,7 +342,6 @@ def run_comprehensive_tests():
     
     results = []
     for i, case in enumerate(test_cases):
-        logger.info(f"Running test case {i+1}/{len(test_cases)}")
         try:
             titles, logs = generate_titles(
                 case.get("category", ""),

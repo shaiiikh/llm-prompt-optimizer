@@ -124,56 +124,7 @@ category_options = ["Select event category", "Technology", "Business", "Educatio
 event_type_options = ["Select event type", "Conference", "Workshop", "Seminar", "Webinar", "Festival", "Exhibition", "Meetup", "Other"]
 tone_options = ["Select tone of event", "Professional", "Casual", "Formal", "Creative", "Premium", "Innovative", "Friendly", "Corporate", "Other"]
 
-with st.sidebar:
-    st.header("Generation Analytics")
-    
-    if st.session_state.title_logs:
-        title_btn_style = """
-        <style>
-        div.stButton > button:first-child {
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            padding: 0.5rem 1rem;
-            font-weight: 600;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
-        }
-        div.stButton > button:first-child:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-        }
-        </style>
-        """
-        st.markdown(title_btn_style, unsafe_allow_html=True)
-        
-        if st.button("View Title Generation Analytics", key="title_logs_btn", use_container_width=True):
-            st.session_state.show_title_logs = not st.session_state.show_title_logs
-        
-        if st.session_state.show_title_logs:
-            st.markdown("### Title Generation Analytics")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("Prompt Tokens", st.session_state.title_logs['Prompt tokens'])
-                st.metric("Total Tokens", st.session_state.title_logs['Total tokens'])
-            with col2:
-                st.metric("Completion Tokens", st.session_state.title_logs['Completion tokens'])
-                st.metric("Generation Time", f"{st.session_state.title_logs['Time taken (s)']}s")
-            
-            st.metric("Cost", st.session_state.title_logs['Estimated cost ($)'])
-            
-            if len(st.session_state.generated_titles) > 0:
-                total_title_chars = sum(len(title) for title in st.session_state.generated_titles)
-                avg_title_length = total_title_chars / len(st.session_state.generated_titles)
-                st.metric("Total Characters Generated", total_title_chars)
-                st.metric("Average Title Length", f"{avg_title_length:.1f} chars")
-            
-            st.divider()
-    
-    if not st.session_state.title_logs and not st.session_state.desc_logs:
-        st.info("Generate content to view detailed analytics here.")
+
 
 st.markdown("## Title Generation")
 
@@ -274,6 +225,35 @@ if st.session_state.generated_titles:
     st.markdown("### Generated Titles:")
     for i, title in enumerate(st.session_state.generated_titles):
         st.markdown(f'<div class="generated-title"><span style="font-weight: 600 !important;">{i+1}. {title}</span></div>', unsafe_allow_html=True)
+    # Title analytics button and display (only in main area)
+    if st.session_state.title_logs:
+        if st.button("View Title Generation Analytics", key="title_analytics_btn", use_container_width=True):
+            st.markdown("### Title Generation Analytics")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Prompt Tokens", st.session_state.title_logs['Prompt tokens'])
+                st.metric("Total Tokens", st.session_state.title_logs['Total tokens'])
+            with col2:
+                st.metric("Completion Tokens", st.session_state.title_logs['Completion tokens'])
+                st.metric("Generation Time", f"{st.session_state.title_logs['Time taken (s)']}s")
+            st.metric("Cost", st.session_state.title_logs['Estimated cost ($)'])
+            if st.session_state.generated_titles:
+                total_title_chars = sum(len(title) for title in st.session_state.generated_titles)
+                avg_title_length = total_title_chars / len(st.session_state.generated_titles)
+                st.metric("Total Characters Generated", total_title_chars)
+                st.metric("Average Title Length", f"{avg_title_length:.1f} chars")
+            st.markdown(f"**Model Used:** {st.session_state.title_logs.get('Model', 'gpt-3.5-turbo')}")
+            with st.expander("Show Prompt Preview"):
+                st.markdown(f"""
+**System Prompt:**
+```
+{st.session_state.title_logs.get('System prompt', '')}
+```
+**User Prompt:**
+```
+{st.session_state.title_logs.get('User prompt', '')}
+```
+""", unsafe_allow_html=True)
     
     st.markdown("### Select or Create Your Title:")
     
