@@ -1,5 +1,29 @@
 import streamlit as st
-from event_llm_core import generate_titles, generate_description, fuzzy_correct
+import os
+
+try:
+    from event_llm_core import generate_titles, generate_description, fuzzy_correct
+except Exception as e:
+    st.error("**Configuration Error**")
+    st.error("OpenAI API key is missing or invalid.")
+    st.markdown("""
+    ### How to fix this:
+    
+    **For Streamlit Cloud:**
+    1. Go to your app settings
+    2. Click on "Secrets" 
+    3. Add: `OPENAI_API_KEY = "your_api_key_here"`
+    
+    **For local development:**
+    1. Create a `.env` file
+    2. Add: `OPENAI_API_KEY=your_api_key_here`
+    
+    **Get your API key:**
+    - Visit: https://platform.openai.com/api-keys
+    - Create a new secret key
+    - Copy and paste it in the configuration above
+    """)
+    st.stop()
 
 st.set_page_config(page_title="EC - Title & Desc Gen", layout="wide")
 

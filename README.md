@@ -24,6 +24,8 @@ Professional event title and description generator using GPT-3.5-turbo with adva
 
 ## Quick Start
 
+### Local Development
+
 1. **Install dependencies:**
 ```bash
 pip install -r requirements.txt
@@ -38,6 +40,20 @@ echo OPENAI_API_KEY=your_openai_api_key_here > .env
 ```bash
 streamlit run app.py
 ```
+
+### Streamlit Cloud Deployment
+
+1. **Fork/Clone this repository**
+2. **Deploy on Streamlit Cloud:**
+   - Visit: https://share.streamlit.io/
+   - Connect your GitHub account
+   - Select this repository
+   - Set main file: `app.py`
+   
+3. **Add API Key in Streamlit Secrets:**
+   - Go to app settings → Secrets
+   - Add: `OPENAI_API_KEY = "your_openai_api_key_here"`
+   - Get your key from: https://platform.openai.com/api-keys
 
 ## Cost Optimization
 

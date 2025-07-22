@@ -5,9 +5,28 @@ import time
 from dotenv import load_dotenv
 from difflib import get_close_matches
 import logging
+import streamlit as st
 
 load_dotenv()
-API_KEY = os.getenv("OPENAI_API_KEY")
+
+def get_api_key():
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key and 'st' in globals():
+        try:
+            api_key = st.secrets["OPENAI_API_KEY"]
+        except:
+            pass
+    return api_key
+
+API_KEY = get_api_key()
+
+if not API_KEY:
+    if 'st' in globals():
+        st.error("⚠️ OpenAI API key not found! Please add OPENAI_API_KEY to your Streamlit secrets.")
+        st.stop()
+    else:
+        raise ValueError("OpenAI API key not found. Please set OPENAI_API_KEY environment variable or add to Streamlit secrets.")
+
 client = OpenAI(api_key=API_KEY)
 
 logging.basicConfig(level=logging.INFO)
