@@ -204,8 +204,9 @@ def generate_description(title, category, event_type, tone, context=None, max_ch
     
     max_chars = max(100, min(int(max_chars), 2000))
     
+    end_instruction = "Do not stop until you reach the character limit. End with a strong call-to-action. Avoid repeating phrases. Use varied sentence structures."
     if cost_mode == "economy":
-        system_msg = f"Write compelling {tone.lower()} description for '{title}' - {category} {event_type}. EXACTLY {max_chars} characters. Include benefits and call-to-action. Use all available space."
+        system_msg = f"Write compelling {tone.lower()} description for '{title}' - {category} {event_type}. EXACTLY {max_chars} characters. Include benefits and call-to-action. Use all available space. {end_instruction}"
         user_msg = f"Description for: {title} ({category} {event_type}, {tone}) (MUST be {max_chars} characters)"
         max_tokens = int(max_chars/2.8) + 50
         temperature = 0.7
@@ -214,7 +215,7 @@ def generate_description(title, category, event_type, tone, context=None, max_ch
         system_msg = f"""Expert copywriter. Write compelling {max_chars}-character description for '{title}' - {tone.lower()} {event_type} in {category}.
 Structure: Hook → Problem → Solution → Benefits → CTA
 Tone: {tone.lower()}, persuasive, action-oriented
-TARGET: Use the full {max_chars} characters available. Do not stop early.{context_str}"""
+TARGET: Use the full {max_chars} characters available. Do not stop early. Fill all space. {end_instruction}{context_str}"""
         user_msg = f"Write description for '{title}' ({category} {event_type}, {tone}). MUST be as close as possible to {max_chars} characters."
         max_tokens = int(max_chars/2.5) + 100
         temperature = 0.75
@@ -223,7 +224,8 @@ TARGET: Use the full {max_chars} characters available. Do not stop early.{contex
         system_msg = f"""Professional copywriter. Create engaging {tone.lower()} description for '{title}' - {category} {event_type}.
 Length: EXACTLY {max_chars} characters (use all available space, do not stop early)
 Include: value proposition, benefits, call-to-action
-Style: {tone.lower()}, compelling{context_str}"""
+Style: {tone.lower()}, compelling{context_str}
+{end_instruction}"""
         user_msg = f"Write description: '{title}' ({category} {event_type}, {tone}). Target {max_chars} chars. Use all available space." + (f" {context_str}" if context_str else "")
         max_tokens = int(max_chars/2.6) + 75
         temperature = 0.72
@@ -281,7 +283,11 @@ Style: {tone.lower()}, compelling{context_str}"""
     
     char_efficiency = len(description) / cost if cost > 0 else 0
     
-    description = description[:max_chars]
+    # Post-process: trim to last period if truncation occurs
+    if len(description) > max_chars:
+        description = description[:max_chars]
+        if '.' in description:
+            description = description[:description.rfind('.')+1]
     
     logs = {
         "Prompt tokens": prompt_tokens,
@@ -299,7 +305,10 @@ Style: {tone.lower()}, compelling{context_str}"""
         "event_type": event_type,
         "tone": tone,
         "context": context,
-        "max_chars": max_chars
+        "max_chars": max_chars,
+        "model": "gpt-3.5-turbo",
+        "system_prompt": system_msg,
+        "user_prompt": user_msg
     }
     
     return description, logs

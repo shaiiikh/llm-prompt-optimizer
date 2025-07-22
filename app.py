@@ -411,15 +411,37 @@ if st.session_state.description:
     st.markdown(f'<div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #28a745; color: #333;">{st.session_state.description}</div>', unsafe_allow_html=True)
     st.info(f"Description length: {len(st.session_state.description)} characters")
 
+    # Copy-to-Clipboard button
+    st.code(st.session_state.description, language=None)
+    st.button("Copy Description", on_click=lambda: st.session_state.update({'_clipboard': st.session_state.description}), key="copy_desc_btn")
+
+    # Download as TXT
+    st.download_button("Download as .txt", st.session_state.description, file_name="event_description.txt", mime="text/plain", key="download_desc_btn")
+
+    # Paraphrase button
+    if st.button("Paraphrase Description", key="paraphrase_desc_btn"):
+        description, logs = generate_description(
+            st.session_state.final_title,
+            st.session_state.desc_logs.get('category', ''),
+            st.session_state.desc_logs.get('event_type', ''),
+            st.session_state.desc_logs.get('tone', ''),
+            st.session_state.desc_logs.get('context', None),
+            st.session_state.desc_logs.get('max_chars', 2000),
+            st.session_state.desc_logs.get('Cost mode', 'balanced')
+        )
+        st.session_state.description = description
+        st.session_state.desc_logs = logs
+
     # Character utilization progress bar
     if st.session_state.desc_logs:
-        utilization = len(st.session_state.description) / int(st.session_state.desc_logs.get('Target utilization', '100').replace('%','')) * 100
-        st.progress(min(int(utilization), 100), text=f"Character Utilization: {len(st.session_state.description)}/{int(st.session_state.desc_logs.get('Target utilization', '100').replace('%',''))}")
+        utilization = len(st.session_state.description) / st.session_state.desc_logs.get('max_chars', 2000)
+        st.progress(min(int(utilization*100), 100), text=f"Character Utilization: {len(st.session_state.description)}/{st.session_state.desc_logs.get('max_chars', 2000)}")
+        if utilization >= 0.95:
+            st.success("✔️ Description is within 95%+ of requested length.")
 
     if st.session_state.desc_logs and st.session_state.desc_logs.get("Shorter than requested"):
         st.warning("Description is shorter than requested. Try increasing the length or re-generating.")
         if st.button("Regenerate Description", key="regenerate_desc_btn"):
-            # Re-run the last description generation with same params
             description, logs = generate_description(
                 st.session_state.final_title,
                 st.session_state.desc_logs.get('category', ''),
@@ -434,6 +456,18 @@ if st.session_state.description:
 
     # Description analytics button and display (only in main area)
     if st.session_state.desc_logs:
+        st.markdown(f"**Model Used:** {st.session_state.desc_logs.get('model', 'gpt-3.5-turbo')}")
+        with st.expander("Show Prompt Preview"):
+            st.markdown(f"""
+**System Prompt:**
+```
+{st.session_state.desc_logs.get('system_prompt', '')}
+```
+**User Prompt:**
+```
+{st.session_state.desc_logs.get('user_prompt', '')}
+```
+""", unsafe_allow_html=True)
         if st.button("View Description Generation Analytics", key="desc_analytics_btn", use_container_width=True):
             st.markdown("### Description Generation Analytics")
             col1, col2 = st.columns(2)
