@@ -139,6 +139,33 @@ def display_current_context():
     else:
         st.info("**Current Context:** None")
 
+def validate_form_inputs(category, event_type, tone, required_fields=None):
+    errors = []
+    
+    if category == "Select event category":
+        errors.append("Please select an event category")
+    
+    if event_type == "Select event type":
+        errors.append("Please select an event type")
+    
+    if tone == "Select tone of event":
+        errors.append("Please select a tone for your event")
+    
+    if required_fields:
+        for field_name, field_value in required_fields.items():
+            if not field_value or field_value.strip() == "":
+                errors.append(f"Please provide {field_name}")
+    
+    return errors
+
+def show_validation_errors(errors):
+    if errors:
+        st.error("Please fix the following issues:")
+        for error in errors:
+            st.error(f"• {error}")
+        return True
+    return False
+
 def show_context_input(step_name, key_suffix=""):
     st.markdown(f"### Add More Context for {step_name}")
     st.markdown("You can add more information or changes that will be used for all future generations:")
@@ -237,21 +264,26 @@ with st.form("title_form", clear_on_submit=False):
     generate_titles_btn = st.form_submit_button("Generate Titles")
 
 if generate_titles_btn:
+    final_category = custom_title_category if title_category == "Other" and 'custom_title_category' in locals() and custom_title_category else title_category
+    final_event_type = custom_title_event_type if title_event_type == "Other" and 'custom_title_event_type' in locals() and custom_title_event_type else title_event_type
+    final_tone = custom_title_tone if title_tone == "Other" and 'custom_title_tone' in locals() and custom_title_tone else title_tone
+    
+    validation_errors = validate_form_inputs(final_category, final_event_type, final_tone)
+    
+    if show_validation_errors(validation_errors):
+        st.stop()
+    
     if title_context and not st.session_state.master_context:
         st.session_state.master_context = title_context
     
     with st.spinner("Generating titles with advanced prompt engineering..."):
         try:
-            final_category = custom_title_category if title_category == "Other" and 'custom_title_category' in locals() and custom_title_category else title_category
-            final_event_type = custom_title_event_type if title_event_type == "Other" and 'custom_title_event_type' in locals() and custom_title_event_type else title_event_type
-            final_tone = custom_title_tone if title_tone == "Other" and 'custom_title_tone' in locals() and custom_title_tone else title_tone
-            
             combined_context = get_combined_context()
             
             titles, logs = generate_titles(
-                final_category if final_category != "Select event category" else "Business",
-                final_event_type if final_event_type != "Select event type" else "Conference",
-                final_tone if final_tone != "Select tone of event" else "Professional",
+                final_category,
+                final_event_type,
+                final_tone,
                 num_titles,
                 combined_context,
                 cost_mode
@@ -401,24 +433,30 @@ if st.session_state.get("final_title"):
         generate_desc_btn = st.form_submit_button("Generate Description")
 
     if generate_desc_btn:
+        if desc_use_same != "Use same title and settings as above":
+            final_desc_category = custom_desc_category if desc_category == "Other" and 'custom_desc_category' in locals() and custom_desc_category else desc_category
+            final_desc_event_type = custom_desc_event_type if desc_event_type == "Other" and 'custom_desc_event_type' in locals() and custom_desc_event_type else desc_event_type
+            final_desc_tone = custom_desc_tone if desc_tone == "Other" and 'custom_desc_tone' in locals() and custom_desc_tone else desc_tone
+        else:
+            final_desc_category = desc_category
+            final_desc_event_type = desc_event_type
+            final_desc_tone = desc_tone
+        
+        required_fields = {"title": desc_title}
+        validation_errors = validate_form_inputs(final_desc_category, final_desc_event_type, final_desc_tone, required_fields)
+        
+        if show_validation_errors(validation_errors):
+            st.stop()
+        
         with st.spinner("Generating description with advanced prompt engineering..."):
             try:
-                if desc_use_same != "Use same title and settings as above":
-                    final_desc_category = custom_desc_category if desc_category == "Other" and 'custom_desc_category' in locals() and custom_desc_category else desc_category
-                    final_desc_event_type = custom_desc_event_type if desc_event_type == "Other" and 'custom_desc_event_type' in locals() and custom_desc_event_type else desc_event_type
-                    final_desc_tone = custom_desc_tone if desc_tone == "Other" and 'custom_desc_tone' in locals() and custom_desc_tone else desc_tone
-                else:
-                    final_desc_category = desc_category
-                    final_desc_event_type = desc_event_type
-                    final_desc_tone = desc_tone
-                
                 combined_context = get_combined_context()
                 
                 description, logs = generate_description(
-                    desc_title if desc_title else "Event Title",
-                    final_desc_category if final_desc_category != "Select event category" else "Business",
-                    final_desc_event_type if final_desc_event_type != "Select event type" else "Conference",
-                    final_desc_tone if final_desc_tone != "Select tone of event" else "Professional",
+                    desc_title,
+                    final_desc_category,
+                    final_desc_event_type,
+                    final_desc_tone,
                     combined_context,
                     max_chars,
                     desc_cost_mode
@@ -555,12 +593,22 @@ if st.session_state.get("final_title"):
         generate_visual_btn = st.form_submit_button(f"Generate {'Flyer' if 'Flyer' in visual_type else 'Banner'}")
 
     if generate_visual_btn:
+        final_visual_category = custom_visual_category if visual_category == "Other" and 'custom_visual_category' in locals() and custom_visual_category else visual_category
+        final_visual_event_type = custom_visual_event_type if visual_event_type == "Other" and 'custom_visual_event_type' in locals() and custom_visual_event_type else visual_event_type
+        final_visual_tone = custom_visual_tone if visual_tone == "Other" and 'custom_visual_tone' in locals() and custom_visual_tone else visual_tone
+        
+        required_fields = {
+            "title": visual_title,
+            "description": visual_description
+        }
+        validation_errors = validate_form_inputs(final_visual_category, final_visual_event_type, final_visual_tone, required_fields)
+        
+        if show_validation_errors(validation_errors):
+            st.stop()
+        
         visual_type_name = "flyer" if "Flyer" in visual_type else "banner"
         with st.spinner(f"Generating {visual_type_name} with advanced prompt engineering..."):
             try:
-                final_visual_category = custom_visual_category if visual_category == "Other" and 'custom_visual_category' in locals() and custom_visual_category else visual_category
-                final_visual_event_type = custom_visual_event_type if visual_event_type == "Other" and 'custom_visual_event_type' in locals() and custom_visual_event_type else visual_event_type
-                final_visual_tone = custom_visual_tone if visual_tone == "Other" and 'custom_visual_tone' in locals() and custom_visual_tone else visual_tone
                 
                 combined_context = visual_context if visual_context else get_combined_context()
                 
@@ -679,17 +727,26 @@ if st.session_state.get("final_title"):
         generate_faq_btn = st.form_submit_button("Generate FAQs")
 
     if generate_faq_btn:
+        final_faq_category = custom_faq_category if faq_category == "Other" and 'custom_faq_category' in locals() and custom_faq_category else faq_category
+        final_faq_event_type = custom_faq_event_type if faq_event_type == "Other" and 'custom_faq_event_type' in locals() and custom_faq_event_type else faq_event_type
+        final_faq_tone = custom_faq_tone if faq_tone == "Other" and 'custom_faq_tone' in locals() and custom_faq_tone else faq_tone
+        
+        required_fields = {
+            "title": faq_title,
+            "description": faq_description
+        }
+        validation_errors = validate_form_inputs(final_faq_category, final_faq_event_type, final_faq_tone, required_fields)
+        
+        if show_validation_errors(validation_errors):
+            st.stop()
+        
         with st.spinner("Generating FAQs with advanced prompt engineering..."):
             try:
-                final_faq_category = custom_faq_category if faq_category == "Other" and 'custom_faq_category' in locals() and custom_faq_category else faq_category
-                final_faq_event_type = custom_faq_event_type if faq_event_type == "Other" and 'custom_faq_event_type' in locals() and custom_faq_event_type else faq_event_type
-                final_faq_tone = custom_faq_tone if faq_tone == "Other" and 'custom_faq_tone' in locals() and custom_faq_tone else faq_tone
-                
                 combined_context = get_combined_context()
                 
                 faqs, faq_logs = generate_faqs(
-                    faq_title if faq_title else "Event Title",
-                    faq_description if faq_description else "A professional event.",
+                    faq_title,
+                    faq_description,
                     final_faq_category if final_faq_category != "Select event category" else "Business",
                     final_faq_event_type if final_faq_event_type != "Select event type" else "Conference",
                     final_faq_tone if final_faq_tone != "Select tone of event" else "Professional",
@@ -821,20 +878,29 @@ if st.session_state.get("final_title"):
         generate_refund_btn = st.form_submit_button("Generate Refund Policy")
 
     if generate_refund_btn:
+        final_refund_category = custom_refund_category if refund_category == "Other" and 'custom_refund_category' in locals() and custom_refund_category else refund_category
+        final_refund_event_type = custom_refund_event_type if refund_event_type == "Other" and 'custom_refund_event_type' in locals() and custom_refund_event_type else refund_event_type
+        final_refund_tone = custom_refund_tone if refund_tone == "Other" and 'custom_refund_tone' in locals() and custom_refund_tone else refund_tone
+        
+        required_fields = {
+            "title": refund_title,
+            "description": refund_description
+        }
+        validation_errors = validate_form_inputs(final_refund_category, final_refund_event_type, final_refund_tone, required_fields)
+        
+        if show_validation_errors(validation_errors):
+            st.stop()
+        
         with st.spinner("Generating refund policy with advanced prompt engineering..."):
             try:
-                final_refund_category = custom_refund_category if refund_category == "Other" and 'custom_refund_category' in locals() and custom_refund_category else refund_category
-                final_refund_event_type = custom_refund_event_type if refund_event_type == "Other" and 'custom_refund_event_type' in locals() and custom_refund_event_type else refund_event_type
-                final_refund_tone = custom_refund_tone if refund_tone == "Other" and 'custom_refund_tone' in locals() and custom_refund_tone else refund_tone
-                
                 combined_context = get_combined_context()
                 
                 refund_policy, refund_logs = generate_refund_policy(
-                    refund_title if refund_title else "Event Title",
-                    refund_description if refund_description else "A professional event.",
-                    final_refund_category if final_refund_category != "Select event category" else "Business",
-                    final_refund_event_type if final_refund_event_type != "Select event type" else "Conference",
-                    final_refund_tone if final_refund_tone != "Select tone of event" else "Professional",
+                    refund_title,
+                    refund_description,
+                    final_refund_category,
+                    final_refund_event_type,
+                    final_refund_tone,
                     combined_context,
                     refund_cost_mode
                 )
@@ -849,16 +915,23 @@ if st.session_state.get("final_title"):
         
 
         policy_text = st.session_state.refund_policy
-        policy_sentences = [sentence.strip() for sentence in policy_text.replace('.', '.|').split('|') if sentence.strip()]
         
-        formatted_policy = ""
-        for sentence in policy_sentences:
-            if sentence and not sentence.isspace():
-                clean_sentence = sentence.strip().rstrip('.')
-                if clean_sentence:
-                    formatted_policy += f"• {clean_sentence}\n"
+        formatted_policy = policy_text.replace('\n\n', '\n').replace('\n', '<br/>')
         
-        st.markdown(f'<div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #2563eb; color: #333; line-height: 1.6;"><strong>Refund Policy:</strong><br/><br/>{formatted_policy.replace(chr(10), "<br/>")}</div>', unsafe_allow_html=True)
+        formatted_policy = formatted_policy.replace('1.', '<br/><strong>1.</strong>')
+        formatted_policy = formatted_policy.replace('2.', '<br/><strong>2.</strong>')
+        formatted_policy = formatted_policy.replace('3.', '<br/><strong>3.</strong>')
+        formatted_policy = formatted_policy.replace('4.', '<br/><strong>4.</strong>')
+        formatted_policy = formatted_policy.replace('5.', '<br/><strong>5.</strong>')
+        formatted_policy = formatted_policy.replace('6.', '<br/><strong>6.</strong>')
+        formatted_policy = formatted_policy.replace('7.', '<br/><strong>7.</strong>')
+        formatted_policy = formatted_policy.replace('8.', '<br/><strong>8.</strong>')
+        formatted_policy = formatted_policy.replace('9.', '<br/><strong>9.</strong>')
+        
+        if formatted_policy.startswith('<br/>'):
+            formatted_policy = formatted_policy[5:]
+        
+        st.markdown(f'<div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #2563eb; color: #333; line-height: 1.6;"><strong>Refund Policy:</strong><br/><br/>{formatted_policy}</div>', unsafe_allow_html=True)
         st.download_button("Download Refund Policy", st.session_state.refund_policy, file_name="event_refund_policy.txt", mime="text/plain", key="download_refund_btn")
         
         display_current_context()
@@ -976,12 +1049,7 @@ if content_complete:
         st.markdown("---")
         
         st.markdown("## REFUND POLICY")
-        policy_sentences = [sentence.strip() for sentence in st.session_state.final_refund_policy.replace('.', '.|').split('|') if sentence.strip()]
-        for sentence in policy_sentences:
-            if sentence and not sentence.isspace():
-                clean_sentence = sentence.strip().rstrip('.')
-                if clean_sentence:
-                    st.markdown(f"• {clean_sentence}")
+        st.markdown(st.session_state.final_refund_policy)
         
         st.markdown("---")
         
@@ -997,7 +1065,7 @@ FREQUENTLY ASKED QUESTIONS:
 {chr(10).join([f"• Q{i}: {faq['question']}{chr(10)}  Answer: {faq['answer']}{chr(10)}" for i, faq in enumerate(st.session_state.final_faqs, 1)])}
 
 REFUND POLICY:
-{chr(10).join([f"• {sentence.strip().rstrip('.')}" for sentence in st.session_state.final_refund_policy.replace('.', '.|').split('|') if sentence.strip() and not sentence.isspace()])}
+{st.session_state.final_refund_policy}
 
 FLYER URL:
 {st.session_state.final_flyer}

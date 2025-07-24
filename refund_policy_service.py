@@ -13,6 +13,24 @@ def main():
     
     args = parser.parse_args()
     
+    errors = []
+    if not args.title or args.title.strip() == "":
+        errors.append("Title is required")
+    if not args.description or args.description.strip() == "":
+        errors.append("Description is required")
+    if not args.category or args.category.strip() == "":
+        errors.append("Category is required")
+    if not args.event_type or args.event_type.strip() == "":
+        errors.append("Event type is required")
+    if not args.tone or args.tone.strip() == "":
+        errors.append("Tone is required")
+    
+    if errors:
+        print("[Refund Policy Service] Validation Errors:")
+        for error in errors:
+            print(f"  • {error}")
+        exit(1)
+    
     print(f"[Refund Policy Service] Generating refund policy")
     print(f"[Refund Policy Service] Title: {args.title}")
     print(f"[Refund Policy Service] Description: {args.description}")
@@ -39,12 +57,7 @@ def main():
     
     print(f"[Refund Policy Service] Generated Refund Policy:")
     
-    policy_sentences = [sentence.strip() for sentence in refund_policy.replace('.', '.|').split('|') if sentence.strip()]
-    for sentence in policy_sentences:
-        if sentence and not sentence.isspace():
-            clean_sentence = sentence.strip().rstrip('.')
-            if clean_sentence:
-                print(f"  • {clean_sentence}")
+    print(refund_policy)
 
 if __name__ == "__main__":
     main() 

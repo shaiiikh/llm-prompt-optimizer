@@ -8,11 +8,27 @@ def main():
     parser.add_argument('--event_type', required=True, help='Event type')
     parser.add_argument('--tone', required=True, help='Tone of the event')
     parser.add_argument('--context', required=False, default=None, help='Optional context')
-    parser.add_argument('--max_chars', type=int, default=800, help='Maximum characters (max 2000)')
+    parser.add_argument('--max_chars', type=int, default=800, help='Maximum characters (max 5000)')
     
     args = parser.parse_args()
     
-    max_chars = max(100, min(args.max_chars, 2000))
+    errors = []
+    if not args.title or args.title.strip() == "":
+        errors.append("Title is required")
+    if not args.category or args.category.strip() == "":
+        errors.append("Category is required")
+    if not args.event_type or args.event_type.strip() == "":
+        errors.append("Event type is required")
+    if not args.tone or args.tone.strip() == "":
+        errors.append("Tone is required")
+    
+    if errors:
+        print("[Description Service] Validation Errors:")
+        for error in errors:
+            print(f"  • {error}")
+        exit(1)
+    
+    max_chars = max(100, min(args.max_chars, 5000))
     
     print(f"[Description Service] Generating description")
     print(f"[Description Service] Title: {args.title}")

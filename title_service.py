@@ -11,6 +11,20 @@ def main():
     
     args = parser.parse_args()
     
+    errors = []
+    if not args.category or args.category.strip() == "":
+        errors.append("Category is required")
+    if not args.event_type or args.event_type.strip() == "":
+        errors.append("Event type is required")
+    if not args.tone or args.tone.strip() == "":
+        errors.append("Tone is required")
+    
+    if errors:
+        print("[Title Service] Validation Errors:")
+        for error in errors:
+            print(f"  • {error}")
+        exit(1)
+    
     num_titles = max(1, min(args.num_titles, 5))
     
     print(f"[Title Service] Generating {num_titles} titles")

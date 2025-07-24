@@ -13,6 +13,24 @@ def main():
     
     args = parser.parse_args()
     
+    errors = []
+    if not args.title or args.title.strip() == "":
+        errors.append("Title is required")
+    if not args.description or args.description.strip() == "":
+        errors.append("Description is required")
+    if not args.category or args.category.strip() == "":
+        errors.append("Category is required")
+    if not args.event_type or args.event_type.strip() == "":
+        errors.append("Event type is required")
+    if not args.tone or args.tone.strip() == "":
+        errors.append("Tone is required")
+    
+    if errors:
+        print("[FAQ Service] Validation Errors:")
+        for error in errors:
+            print(f"  • {error}")
+        exit(1)
+    
     print(f"[FAQ Service] Generating FAQs")
     print(f"[FAQ Service] Title: {args.title}")
     print(f"[FAQ Service] Description: {args.description}")
