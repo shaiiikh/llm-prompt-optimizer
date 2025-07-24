@@ -2,7 +2,7 @@ import streamlit as st
 import os
 
 try:
-    from event_llm_core import generate_titles, generate_description, generate_flyer_image, generate_faqs_and_refund_policy, fuzzy_correct
+    from event_llm_core import generate_titles, generate_description, generate_flyer_image, generate_banner_image, generate_faqs, generate_refund_policy, fuzzy_correct, get_global_analytics, reset_analytics
 except Exception as e:
     st.error("**Configuration Error**")
     st.error("OpenAI API key is missing or invalid.")
@@ -51,109 +51,180 @@ st.write("Generate event titles, descriptions, flyers/banners, FAQs, and refund 
 
 def get_optimization_tip(category, event_type, tone):
     tips = {
-        ("Technology", "Conference", "Professional"): "Pro tip: Technology conferences perform best with titles that emphasize innovation, future trends, and networking opportunities.",
-        ("Technology", "Workshop", "Creative"): "Pro tip: Creative technology workshops work best when titles suggest hands-on learning and innovation.",
-        ("Business", "Workshop", "Formal"): "Pro tip: Formal business workshops should highlight specific skills, ROI, and executive-level insights.",
-        ("Business", "Conference", "Professional"): "Pro tip: Professional business conferences perform best with titles emphasizing leadership and strategic outcomes.",
-        ("Education", "Seminar", "Creative"): "Pro tip: Creative education seminars work best when titles suggest transformation and hands-on learning.",
-        ("Education", "Conference", "Innovative"): "Pro tip: Innovative education conferences should emphasize future learning methods and technology integration.",
-        ("Health", "Workshop", "Friendly"): "Pro tip: Friendly health workshops perform best with approachable titles that emphasize wellness and community.",
-        ("Entertainment", "Festival", "Casual"): "Pro tip: Casual entertainment festivals work best with fun, energetic titles that create excitement.",
-        ("Sports", "Conference", "Professional"): "Pro tip: Professional sports conferences should emphasize performance, strategy, and industry insights.",
-        ("Arts & Culture", "Exhibition", "Creative"): "Pro tip: Creative arts exhibitions work best with inspiring titles that evoke curiosity and artistic expression."
+        ("Technology", "Conference", "Professional"): "Technology conferences perform best with titles that emphasize innovation, future trends, and networking opportunities.",
+        ("Technology", "Workshop", "Creative"): "Creative technology workshops work best when titles suggest hands-on learning and innovation.",
+        ("Business", "Workshop", "Formal"): "Formal business workshops should highlight specific skills, ROI, and executive-level insights.",
+        ("Business", "Conference", "Professional"): "Professional business conferences perform best with titles emphasizing leadership and strategic outcomes.",
+        ("Education", "Seminar", "Creative"): "Creative education seminars work best when titles suggest transformation and hands-on learning.",
+        ("Education", "Conference", "Innovative"): "Innovative education conferences should emphasize future learning methods and technology integration.",
+        ("Health", "Workshop", "Friendly"): "Friendly health workshops perform best with approachable titles that emphasize wellness and community.",
+        ("Entertainment", "Festival", "Casual"): "Casual entertainment festivals work best with fun, energetic titles that create excitement.",
+        ("Sports", "Conference", "Professional"): "Professional sports conferences should emphasize performance, strategy, and industry insights.",
+        ("Arts & Culture", "Exhibition", "Creative"): "Creative arts exhibitions work best with inspiring titles that evoke curiosity and artistic expression."
     }
     
     key = (category, event_type, tone)
     if key in tips:
         return tips[key]
     
-    return f"Pro tip: {tone} {event_type}s in {category} perform best when titles clearly communicate the unique value and target outcome."
+    return f"{tone} {event_type}s in {category} perform best when titles clearly communicate the unique value and target outcome."
 
 def suggest_optimal_settings(category, event_type):
     suggestions = {
         ("Technology", "Conference"): {"tone": "Professional", "titles": 5, "desc_length": 1200},
         ("Technology", "Workshop"): {"tone": "Creative", "titles": 4, "desc_length": 800},
-        ("Business", "Seminar"): {"tone": "Formal", "titles": 3, "desc_length": 1000},
+        ("Technology", "Seminar"): {"tone": "Professional", "titles": 4, "desc_length": 1000},
+        ("Technology", "Webinar"): {"tone": "Innovative", "titles": 4, "desc_length": 900},
+        ("Technology", "Festival"): {"tone": "Creative", "titles": 5, "desc_length": 1100},
+        ("Technology", "Exhibition"): {"tone": "Professional", "titles": 4, "desc_length": 1000},
         ("Business", "Conference"): {"tone": "Professional", "titles": 5, "desc_length": 1400},
+        ("Business", "Workshop"): {"tone": "Formal", "titles": 4, "desc_length": 900},
+        ("Business", "Seminar"): {"tone": "Formal", "titles": 3, "desc_length": 1000},
+        ("Business", "Webinar"): {"tone": "Professional", "titles": 4, "desc_length": 1000},
+        ("Business", "Festival"): {"tone": "Professional", "titles": 4, "desc_length": 1200},
+        ("Business", "Exhibition"): {"tone": "Professional", "titles": 4, "desc_length": 1100},
         ("Education", "Conference"): {"tone": "Innovative", "titles": 5, "desc_length": 1400},
         ("Education", "Workshop"): {"tone": "Creative", "titles": 4, "desc_length": 900},
+        ("Education", "Seminar"): {"tone": "Innovative", "titles": 4, "desc_length": 1100},
+        ("Education", "Webinar"): {"tone": "Creative", "titles": 5, "desc_length": 1000},
+        ("Education", "Festival"): {"tone": "Creative", "titles": 5, "desc_length": 1200},
+        ("Education", "Exhibition"): {"tone": "Innovative", "titles": 4, "desc_length": 1000},
+        ("Health", "Conference"): {"tone": "Professional", "titles": 4, "desc_length": 1300},
         ("Health", "Workshop"): {"tone": "Friendly", "titles": 4, "desc_length": 900},
         ("Health", "Seminar"): {"tone": "Professional", "titles": 3, "desc_length": 800},
+        ("Health", "Webinar"): {"tone": "Friendly", "titles": 4, "desc_length": 900},
+        ("Health", "Festival"): {"tone": "Friendly", "titles": 5, "desc_length": 1100},
+        ("Health", "Exhibition"): {"tone": "Professional", "titles": 4, "desc_length": 1000},
+        ("Entertainment", "Conference"): {"tone": "Creative", "titles": 4, "desc_length": 1100},
+        ("Entertainment", "Workshop"): {"tone": "Casual", "titles": 4, "desc_length": 800},
+        ("Entertainment", "Seminar"): {"tone": "Creative", "titles": 3, "desc_length": 900},
+        ("Entertainment", "Webinar"): {"tone": "Casual", "titles": 4, "desc_length": 800},
         ("Entertainment", "Festival"): {"tone": "Casual", "titles": 5, "desc_length": 1000},
+        ("Entertainment", "Exhibition"): {"tone": "Creative", "titles": 5, "desc_length": 1100},
         ("Sports", "Conference"): {"tone": "Professional", "titles": 4, "desc_length": 1200},
+        ("Sports", "Workshop"): {"tone": "Professional", "titles": 4, "desc_length": 900},
+        ("Sports", "Seminar"): {"tone": "Professional", "titles": 3, "desc_length": 800},
+        ("Sports", "Webinar"): {"tone": "Professional", "titles": 4, "desc_length": 900},
+        ("Sports", "Festival"): {"tone": "Casual", "titles": 5, "desc_length": 1100},
+        ("Sports", "Exhibition"): {"tone": "Professional", "titles": 4, "desc_length": 1000},
+        ("Arts & Culture", "Conference"): {"tone": "Creative", "titles": 4, "desc_length": 1200},
+        ("Arts & Culture", "Workshop"): {"tone": "Creative", "titles": 4, "desc_length": 900},
+        ("Arts & Culture", "Seminar"): {"tone": "Creative", "titles": 3, "desc_length": 900},
+        ("Arts & Culture", "Webinar"): {"tone": "Creative", "titles": 4, "desc_length": 800},
+        ("Arts & Culture", "Festival"): {"tone": "Creative", "titles": 5, "desc_length": 1200},
         ("Arts & Culture", "Exhibition"): {"tone": "Creative", "titles": 5, "desc_length": 1100}
     }
     
     key = (category, event_type)
     return suggestions.get(key, {"tone": "Professional", "titles": 3, "desc_length": 800})
 
-if 'generated_titles' not in st.session_state:
-    st.session_state.generated_titles = []
-if 'final_title' not in st.session_state:
-    st.session_state.final_title = ""
-if 'description' not in st.session_state:
-    st.session_state.description = ""
-if 'final_description' not in st.session_state:
-    st.session_state.final_description = ""
-if 'flyer_image_url' not in st.session_state:
-    st.session_state.flyer_image_url = ""
-if 'final_flyer' not in st.session_state:
-    st.session_state.final_flyer = ""
-if 'faqs' not in st.session_state:
-    st.session_state.faqs = []
-if 'final_faqs' not in st.session_state:
-    st.session_state.final_faqs = []
-if 'refund_policy' not in st.session_state:
-    st.session_state.refund_policy = ""
-if 'final_refund_policy' not in st.session_state:
-    st.session_state.final_refund_policy = ""
-if 'title_logs' not in st.session_state:
-    st.session_state.title_logs = None
-if 'desc_logs' not in st.session_state:
-    st.session_state.desc_logs = None
-if 'flyer_logs' not in st.session_state:
-    st.session_state.flyer_logs = None
-if 'faq_logs' not in st.session_state:
-    st.session_state.faq_logs = None
+def get_combined_context():
+    if not st.session_state.master_context and not st.session_state.context_updates:
+        return None
+    
+    combined = st.session_state.master_context
+    if st.session_state.context_updates:
+        combined += " " + " ".join(st.session_state.context_updates)
+    
+    return combined.strip() if combined.strip() else None
 
-category_options = ["Select event category", "Technology", "Business", "Education", "Health", "Entertainment", "Sports", "Arts & Culture", "Other"]
-event_type_options = ["Select event type", "Conference", "Workshop", "Seminar", "Webinar", "Festival", "Exhibition", "Meetup", "Other"]
-tone_options = ["Select tone of event", "Professional", "Casual", "Formal", "Creative", "Premium", "Innovative", "Friendly", "Corporate", "Other"]
+def add_context_update(new_info):
+    if new_info and new_info.strip():
+        st.session_state.context_updates.append(new_info.strip())
+
+def display_current_context():
+    context = get_combined_context()
+    if context:
+        st.info(f"**Current Context:** {context}")
+    else:
+        st.info("**Current Context:** None")
+
+def show_context_input(step_name, key_suffix=""):
+    st.markdown(f"### Add More Context for {step_name}")
+    st.markdown("You can add more information or changes that will be used for all future generations:")
+    
+    new_context = st.text_area(
+        f"Additional context or changes for {step_name}:",
+        placeholder=f"e.g., Make it more focused on sustainability, Add networking aspects, Change the target audience to executives...",
+        key=f"new_context_{key_suffix}",
+        help="This will be combined with your previous context and used for all future content generation."
+    )
+    
+    if st.button(f"Add Context for {step_name}", key=f"add_context_{key_suffix}"):
+        if new_context:
+            add_context_update(new_context)
+            st.success(f"Added context: {new_context}")
+            st.rerun()
+        else:
+            st.warning("Please enter some context to add.")
+    
+    return new_context
+
+def initialize_session_state():
+    session_vars = {
+        'generated_titles': [],
+        'final_title': "",
+        'description': "",
+        'final_description': "",
+        'flyer_image_url': "",
+        'final_flyer': "",
+        'faqs': [],
+        'final_faqs': [],
+        'refund_policy': "",
+        'final_refund_policy': "",
+        'title_logs': None,
+        'desc_logs': None,
+        'flyer_logs': None,
+        'faq_logs': None,
+        'refund_logs': None,
+        'master_context': "",
+        'context_updates': []
+    }
+    
+    for var, default_value in session_vars.items():
+        if var not in st.session_state:
+            st.session_state[var] = default_value
+
+initialize_session_state()
+
+CATEGORY_OPTIONS = ["Select event category", "Technology", "Business", "Education", "Health", "Entertainment", "Sports", "Arts & Culture", "Other"]
+EVENT_TYPE_OPTIONS = ["Select event type", "Conference", "Workshop", "Seminar", "Webinar", "Festival", "Exhibition", "Meetup", "Other"]
+TONE_OPTIONS = ["Select tone of event", "Professional", "Casual", "Formal", "Creative", "Premium", "Innovative", "Friendly", "Corporate", "Other"]
 
 st.markdown("## Title Generation")
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    title_category = st.selectbox("Category for Titles", category_options, index=0, key="title_category")
+    title_category = st.selectbox("Category for Titles", CATEGORY_OPTIONS, index=0, key="title_category")
     if title_category == "Other":
         custom_title_category = st.text_input("Custom category", key="custom_title_category")
         if custom_title_category:
-            suggestion = fuzzy_correct(custom_title_category, category_options[1:-1])
+            suggestion = fuzzy_correct(custom_title_category, CATEGORY_OPTIONS[1:-1])
             if suggestion != custom_title_category:
                 st.info(f"Did you mean: {suggestion}?")
 
 with col2:
-    title_event_type = st.selectbox("Event Type for Titles", event_type_options, index=0, key="title_event_type")
+    title_event_type = st.selectbox("Event Type for Titles", EVENT_TYPE_OPTIONS, index=0, key="title_event_type")
     if title_event_type == "Other":
         custom_title_event_type = st.text_input("Custom event type", key="custom_title_event_type")
         if custom_title_event_type:
-            suggestion = fuzzy_correct(custom_title_event_type, event_type_options[1:-1])
+            suggestion = fuzzy_correct(custom_title_event_type, EVENT_TYPE_OPTIONS[1:-1])
             if suggestion != custom_title_event_type:
                 st.info(f"Did you mean: {suggestion}?")
 
 with col3:
-    title_tone = st.selectbox("Tone for Titles", tone_options, index=0, key="title_tone")
+    title_tone = st.selectbox("Tone for Titles", TONE_OPTIONS, index=0, key="title_tone")
     if title_tone == "Other":
         custom_title_tone = st.text_input("Custom tone", key="custom_title_tone")
         if custom_title_tone:
-            suggestion = fuzzy_correct(custom_title_tone, tone_options[1:-1])
+            suggestion = fuzzy_correct(custom_title_tone, TONE_OPTIONS[1:-1])
             if suggestion != custom_title_tone:
                 st.info(f"Did you mean: {suggestion}?")
 
 if title_category != "Select event category" and title_event_type != "Select event type":
     optimal = suggest_optimal_settings(title_category, title_event_type)
-    st.markdown(f'<div class="optimization-tip">Optimization Suggestion: For {title_category} {title_event_type}s, consider using {optimal["tone"]} tone with {optimal["titles"]} titles for best results.</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="optimization-tip">Optimization Suggestion: For {title_category} {title_event_type}s, recommended settings are {optimal["tone"]} tone with {optimal["titles"]} titles.</div>', unsafe_allow_html=True)
 
 if title_category != "Select event category" and title_event_type != "Select event type" and title_tone != "Select tone of event":
     tip = get_optimization_tip(title_category, title_event_type, title_tone)
@@ -166,18 +237,23 @@ with st.form("title_form", clear_on_submit=False):
     generate_titles_btn = st.form_submit_button("Generate Titles")
 
 if generate_titles_btn:
+    if title_context and not st.session_state.master_context:
+        st.session_state.master_context = title_context
+    
     with st.spinner("Generating titles with advanced prompt engineering..."):
         try:
             final_category = custom_title_category if title_category == "Other" and 'custom_title_category' in locals() and custom_title_category else title_category
             final_event_type = custom_title_event_type if title_event_type == "Other" and 'custom_title_event_type' in locals() and custom_title_event_type else title_event_type
             final_tone = custom_title_tone if title_tone == "Other" and 'custom_title_tone' in locals() and custom_title_tone else title_tone
             
+            combined_context = get_combined_context()
+            
             titles, logs = generate_titles(
                 final_category if final_category != "Select event category" else "Business",
                 final_event_type if final_event_type != "Select event type" else "Conference",
                 final_tone if final_tone != "Select tone of event" else "Professional",
                 num_titles,
-                title_context if title_context else None,
+                combined_context,
                 cost_mode
             )
             st.session_state.generated_titles = titles
@@ -191,6 +267,9 @@ if st.session_state.get("generated_titles"):
     for i, title in enumerate(st.session_state.generated_titles, 1):
         st.markdown(f'<div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border-left: 4px solid #2563eb; color: #333; margin-bottom: 0.5rem;">{i}. {title}</div>', unsafe_allow_html=True)
     st.download_button("Download Titles", "\n".join(st.session_state.generated_titles), file_name="event_titles.txt", mime="text/plain", key="download_titles_btn")
+    
+    display_current_context()
+    show_context_input("Title Generation", "titles")
     
     if st.session_state.title_logs:
         show_title_analytics = st.button("View Title Generation Analytics", key="title_analytics_btn")
@@ -282,43 +361,43 @@ if st.session_state.get("final_title"):
             desc_tone = st.selectbox("Tone for Description", ["Professional", "Casual", "Formal", "Creative", "Premium", "Innovative", "Friendly", "Corporate", "Other"],
                                    index=max(0, ["Professional", "Casual", "Formal", "Creative", "Premium", "Innovative", "Friendly", "Corporate", "Other"].index(title_tone) if title_tone != "Select tone of event" else 0),
                                    key="desc_tone", disabled=True)
-            desc_context = st.text_input("Context for Description (optional)", value=title_context or "", key="desc_context", disabled=True)
+            desc_context = st.text_input("Context for Description (optional)", value=get_combined_context() or "", key="desc_context", disabled=True)
             desc_cost_mode = st.selectbox("Description Cost Mode", ["balanced", "economy", "premium"], index=["balanced", "economy", "premium"].index(cost_mode), key="desc_cost_mode", disabled=True)
         else:
             desc_title = st.text_input("Title for Description", value=st.session_state.final_title, key="desc_title_input_custom")
             
             col1, col2, col3 = st.columns(3)
             with col1:
-                desc_category = st.selectbox("Category for Description", category_options, index=0, key="desc_category_custom")
+                desc_category = st.selectbox("Category for Description", CATEGORY_OPTIONS, index=0, key="desc_category_custom")
                 if desc_category == "Other":
                     custom_desc_category = st.text_input("Custom category", key="custom_desc_category")
                     if custom_desc_category:
-                        suggestion = fuzzy_correct(custom_desc_category, category_options[1:-1])
+                        suggestion = fuzzy_correct(custom_desc_category, CATEGORY_OPTIONS[1:-1])
                         if suggestion != custom_desc_category:
                             st.info(f"Did you mean: {suggestion}?")
             
             with col2:
-                desc_event_type = st.selectbox("Event Type for Description", event_type_options, index=0, key="desc_event_type_custom")
+                desc_event_type = st.selectbox("Event Type for Description", EVENT_TYPE_OPTIONS, index=0, key="desc_event_type_custom")
                 if desc_event_type == "Other":
                     custom_desc_event_type = st.text_input("Custom event type", key="custom_desc_event_type")
                     if custom_desc_event_type:
-                        suggestion = fuzzy_correct(custom_desc_event_type, event_type_options[1:-1])
+                        suggestion = fuzzy_correct(custom_desc_event_type, EVENT_TYPE_OPTIONS[1:-1])
                         if suggestion != custom_desc_event_type:
                             st.info(f"Did you mean: {suggestion}?")
             
             with col3:
-                desc_tone = st.selectbox("Tone for Description", tone_options, index=0, key="desc_tone_custom")
+                desc_tone = st.selectbox("Tone for Description", TONE_OPTIONS, index=0, key="desc_tone_custom")
                 if desc_tone == "Other":
                     custom_desc_tone = st.text_input("Custom tone", key="custom_desc_tone")
                     if custom_desc_tone:
-                        suggestion = fuzzy_correct(custom_desc_tone, tone_options[1:-1])
+                        suggestion = fuzzy_correct(custom_desc_tone, TONE_OPTIONS[1:-1])
                         if suggestion != custom_desc_tone:
                             st.info(f"Did you mean: {suggestion}?")
             
             desc_context = st.text_input("Context for Description (optional)", value="", key="desc_context_custom")
             desc_cost_mode = st.selectbox("Description Cost Mode", ["balanced", "economy", "premium"], key="desc_cost_mode_custom")
         
-        max_chars = st.slider("Description Length (characters)", min_value=100, max_value=2000, value=800)
+        max_chars = st.slider("Description Length (characters)", min_value=100, max_value=5000, value=800)
         generate_desc_btn = st.form_submit_button("Generate Description")
 
     if generate_desc_btn:
@@ -333,12 +412,14 @@ if st.session_state.get("final_title"):
                     final_desc_event_type = desc_event_type
                     final_desc_tone = desc_tone
                 
+                combined_context = get_combined_context()
+                
                 description, logs = generate_description(
                     desc_title if desc_title else "Event Title",
                     final_desc_category if final_desc_category != "Select event category" else "Business",
                     final_desc_event_type if final_desc_event_type != "Select event type" else "Conference",
                     final_desc_tone if final_desc_tone != "Select tone of event" else "Professional",
-                    desc_context if desc_context else None,
+                    combined_context,
                     max_chars,
                     desc_cost_mode
                 )
@@ -353,6 +434,9 @@ if st.session_state.get("final_title"):
         st.markdown(f'<div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #28a745; color: #333;">{st.session_state.description}</div>', unsafe_allow_html=True)
         st.info(f"Description length: {len(st.session_state.description)} characters")
         st.download_button("Download as .txt", st.session_state.description, file_name="event_description.txt", mime="text/plain", key="download_desc_btn")
+        
+        display_current_context()
+        show_context_input("Description Generation", "description")
         
         if st.session_state.desc_logs:
             show_desc_analytics = st.button("View Description Generation Analytics", key="desc_analytics_btn")
@@ -402,88 +486,127 @@ if st.session_state.get("final_title"):
                 st.success(f"Using custom description ({len(custom_desc)} characters)")
 
 if st.session_state.get("final_title"):
-    st.markdown("## Flyer/Banner Generation")
+    st.markdown("## Visual Content Generation")
     
-    flyer_use_same = st.radio(
-        "Flyer Content:",
-        ["Use selected title/description from above", "Enter custom flyer content"],
-        key="flyer_use_same",
-        help="Choose whether to use the selected title and description or enter custom content for your flyer."
+    visual_type = st.radio(
+        "Choose Visual Type:",
+        ["Flyer (Portrait/Vertical - Detailed Information)", "Banner (Landscape/Horizontal - Digital Display)"],
+        key="visual_type",
+        help="Flyers are portrait-oriented with detailed event information. Banners are landscape-oriented for digital displays with minimal text."
     )
     
-    with st.form("flyer_form", clear_on_submit=False):
-        if flyer_use_same == "Use selected title/description from above":
-            flyer_title = st.text_input("Flyer Title", value=st.session_state.final_title, key="flyer_title_input", disabled=True)
-            flyer_description = st.text_area("Flyer Description", value=st.session_state.get("final_description", st.session_state.get("description", "")), key="flyer_desc_input", disabled=True)
+    content_use_same = st.radio(
+        "Content Source:",
+        ["Use selected title/description from above", "Enter custom content"],
+        key="content_use_same",
+        help="Choose whether to use the selected title and description or enter custom content."
+    )
+    
+    visual_form_key = "flyer_form" if "Flyer" in visual_type else "banner_form"
+    with st.form(visual_form_key, clear_on_submit=False):
+        if content_use_same == "Use selected title/description from above":
+            visual_title = st.text_input(f"{'Flyer' if 'Flyer' in visual_type else 'Banner'} Title", value=st.session_state.final_title, key="visual_title_input", disabled=True)
+            visual_description = st.text_area(f"{'Flyer' if 'Flyer' in visual_type else 'Banner'} Description", value=st.session_state.get("final_description", st.session_state.get("description", "")), key="visual_desc_input", disabled=True)
         else:
-            flyer_title = st.text_input("Flyer Title", value=st.session_state.final_title, key="flyer_title_input_custom")
-            flyer_description = st.text_area("Flyer Description", value=st.session_state.get("final_description", ""), key="flyer_desc_input_custom")
+            visual_title = st.text_input(f"{'Flyer' if 'Flyer' in visual_type else 'Banner'} Title", value=st.session_state.final_title, key="visual_title_input_custom")
+            visual_description = st.text_area(f"{'Flyer' if 'Flyer' in visual_type else 'Banner'} Description", value=st.session_state.get("final_description", ""), key="visual_desc_input_custom")
         
         col1, col2, col3 = st.columns(3)
         with col1:
-            flyer_category = st.selectbox("Flyer Category", category_options, index=0, key="flyer_category")
-            if flyer_category == "Other":
-                custom_flyer_category = st.text_input("Custom category", key="custom_flyer_category")
-                if custom_flyer_category:
-                    suggestion = fuzzy_correct(custom_flyer_category, category_options[1:-1])
-                    if suggestion != custom_flyer_category:
+            visual_category = st.selectbox(f"{'Flyer' if 'Flyer' in visual_type else 'Banner'} Category", CATEGORY_OPTIONS, index=0, key="visual_category")
+            if visual_category == "Other":
+                custom_visual_category = st.text_input("Custom category", key="custom_visual_category")
+                if custom_visual_category:
+                    suggestion = fuzzy_correct(custom_visual_category, CATEGORY_OPTIONS[1:-1])
+                    if suggestion != custom_visual_category:
                         st.info(f"Did you mean: {suggestion}?")
         
         with col2:
-            flyer_event_type = st.selectbox("Flyer Event Type", event_type_options + ["Gala"], index=0, key="flyer_event_type")
-            if flyer_event_type == "Other":
-                custom_flyer_event_type = st.text_input("Custom event type", key="custom_flyer_event_type")
-                if custom_flyer_event_type:
-                    suggestion = fuzzy_correct(custom_flyer_event_type, event_type_options[1:-1])
-                    if suggestion != custom_flyer_event_type:
+            visual_event_type = st.selectbox(f"{'Flyer' if 'Flyer' in visual_type else 'Banner'} Event Type", EVENT_TYPE_OPTIONS + ["Gala"], index=0, key="visual_event_type")
+            if visual_event_type == "Other":
+                custom_visual_event_type = st.text_input("Custom event type", key="custom_visual_event_type")
+                if custom_visual_event_type:
+                    suggestion = fuzzy_correct(custom_visual_event_type, EVENT_TYPE_OPTIONS[1:-1])
+                    if suggestion != custom_visual_event_type:
                         st.info(f"Did you mean: {suggestion}?")
         
         with col3:
-            flyer_tone = st.selectbox("Flyer Tone", tone_options + ["Playful"], index=0, key="flyer_tone")
-            if flyer_tone == "Other":
-                custom_flyer_tone = st.text_input("Custom tone", key="custom_flyer_tone")
-                if custom_flyer_tone:
-                    suggestion = fuzzy_correct(custom_flyer_tone, tone_options[1:-1] + ["Playful"])
-                    if suggestion != custom_flyer_tone:
+            visual_tone = st.selectbox(f"{'Flyer' if 'Flyer' in visual_type else 'Banner'} Tone", TONE_OPTIONS + ["Playful"], index=0, key="visual_tone")
+            if visual_tone == "Other":
+                custom_visual_tone = st.text_input("Custom tone", key="custom_visual_tone")
+                if custom_visual_tone:
+                    suggestion = fuzzy_correct(custom_visual_tone, TONE_OPTIONS[1:-1] + ["Playful"])
+                    if suggestion != custom_visual_tone:
                         st.info(f"Did you mean: {suggestion}?")
         
-        flyer_context = st.text_input("Flyer Context (optional)", value="", key="flyer_context")
-        flyer_cost_mode = st.selectbox("Flyer Cost Mode", ["balanced", "economy", "premium"], key="flyer_cost_mode")
-        flyer_image_size = st.selectbox("Flyer Image Size (Aspect Ratio)", ["1024x1024 (Square)", "1792x1024 (Wide)", "1024x1792 (Tall)"], index=0, key="flyer_image_size")
-        generate_flyer_btn = st.form_submit_button("Generate Flyer/Banner")
+        visual_context = st.text_area(
+            f"{'Flyer' if 'Flyer' in visual_type else 'Banner'} Context (Include event details like time, date, speakers, online/offline)",
+            value=get_combined_context() or "",
+            key="visual_context",
+            help="Include specific details like: 'Event is online at 2 PM Pakistan time with speaker John Doe'"
+        )
+        visual_cost_mode = st.selectbox(f"{'Flyer' if 'Flyer' in visual_type else 'Banner'} Cost Mode", ["balanced", "economy", "premium"], key="visual_cost_mode")
+        
+        if "Flyer" in visual_type:
+            visual_image_size = st.selectbox("Flyer Image Size", ["1024x1792 (Portrait)", "1024x1024 (Square)"], index=0, key="visual_image_size")
+        else:
+            visual_image_size = st.selectbox("Banner Image Size", ["1792x1024 (Landscape)", "1024x1024 (Square)"], index=0, key="visual_image_size")
+        
+        generate_visual_btn = st.form_submit_button(f"Generate {'Flyer' if 'Flyer' in visual_type else 'Banner'}")
 
-    if generate_flyer_btn:
-        with st.spinner("Generating flyer/banner image with advanced prompt engineering..."):
+    if generate_visual_btn:
+        visual_type_name = "flyer" if "Flyer" in visual_type else "banner"
+        with st.spinner(f"Generating {visual_type_name} with advanced prompt engineering..."):
             try:
-                final_flyer_category = custom_flyer_category if flyer_category == "Other" and 'custom_flyer_category' in locals() and custom_flyer_category else flyer_category
-                final_flyer_event_type = custom_flyer_event_type if flyer_event_type == "Other" and 'custom_flyer_event_type' in locals() and custom_flyer_event_type else flyer_event_type
-                final_flyer_tone = custom_flyer_tone if flyer_tone == "Other" and 'custom_flyer_tone' in locals() and custom_flyer_tone else flyer_tone
+                final_visual_category = custom_visual_category if visual_category == "Other" and 'custom_visual_category' in locals() and custom_visual_category else visual_category
+                final_visual_event_type = custom_visual_event_type if visual_event_type == "Other" and 'custom_visual_event_type' in locals() and custom_visual_event_type else visual_event_type
+                final_visual_tone = custom_visual_tone if visual_tone == "Other" and 'custom_visual_tone' in locals() and custom_visual_tone else visual_tone
                 
-                image_url, flyer_logs = generate_flyer_image(
-                    flyer_title if flyer_title else "Event Title",
-                    flyer_description if flyer_description else "A professional event.",
-                    final_flyer_category if final_flyer_category != "Select event category" else "Business",
-                    final_flyer_event_type if final_flyer_event_type != "Select event type" else "Conference",
-                    final_flyer_tone if final_flyer_tone != "Select tone of event" else "Professional",
-                    flyer_context if flyer_context else None,
-                    flyer_cost_mode,
-                    flyer_image_size.split()[0]
-                )
+                combined_context = visual_context if visual_context else get_combined_context()
+                
+                if "Flyer" in visual_type:
+                    image_url, visual_logs = generate_flyer_image(
+                        visual_title if visual_title else "Event Title",
+                        visual_description if visual_description else "A professional event.",
+                        final_visual_category if final_visual_category != "Select event category" else "Business",
+                        final_visual_event_type if final_visual_event_type != "Select event type" else "Conference",
+                        final_visual_tone if final_visual_tone != "Select tone of event" else "Professional",
+                        combined_context,
+                        visual_cost_mode,
+                        visual_image_size.split()[0]
+                    )
+                else:
+                    image_url, visual_logs = generate_banner_image(
+                        visual_title if visual_title else "Event Title",
+                        visual_description if visual_description else "A professional event.",
+                        final_visual_category if final_visual_category != "Select event category" else "Business",
+                        final_visual_event_type if final_visual_event_type != "Select event type" else "Conference",
+                        final_visual_tone if final_visual_tone != "Select tone of event" else "Professional",
+                        combined_context,
+                        visual_cost_mode,
+                        visual_image_size.split()[0]
+                    )
+                
                 st.session_state.flyer_image_url = image_url
-                st.session_state.flyer_logs = flyer_logs
+                st.session_state.flyer_logs = visual_logs
+                st.session_state.visual_type_generated = visual_type_name
             except Exception as e:
-                st.error(f"Error generating flyer: {str(e)}")
+                st.error(f"Error generating {visual_type_name}: {str(e)}")
                 st.error("This could be due to API limits or connection issues. Please try again in a few moments.")
 
     if st.session_state.get("flyer_image_url"):
-        st.markdown("### Generated Flyer/Banner:")
+        visual_type_display = st.session_state.get("visual_type_generated", "visual").title()
+        st.markdown(f"### Generated {visual_type_display}:")
         st.image(st.session_state.flyer_image_url, use_container_width=True)
-        st.download_button("Download Flyer/Banner", st.session_state.flyer_image_url, file_name="event_flyer.png")
+        st.download_button(f"Download {visual_type_display}", st.session_state.flyer_image_url, file_name=f"event_{st.session_state.get('visual_type_generated', 'visual')}.png")
+        
+        display_current_context()
+        show_context_input(f"{visual_type_display} Generation", st.session_state.get('visual_type_generated', 'visual'))
         
         if st.session_state.flyer_logs:
-            show_flyer_analytics = st.button("View Flyer/Banner Generation Analytics", key="flyer_analytics_btn")
+            show_flyer_analytics = st.button(f"View {visual_type_display} Generation Analytics", key="flyer_analytics_btn")
             if show_flyer_analytics:
-                st.markdown("### Flyer/Banner Generation Analytics")
+                st.markdown(f"### {visual_type_display} Generation Analytics")
                 col1, col2 = st.columns(2)
                 with col1:
                     st.metric("Prompt Tokens", st.session_state.flyer_logs.get('Prompt tokens', 'N/A'))
@@ -501,81 +624,82 @@ if st.session_state.get("final_title"):
 ```
 """, unsafe_allow_html=True)
         
-        st.markdown("### Use This Flyer:")
+        st.markdown(f"### Use This {visual_type_display}:")
         st.session_state.final_flyer = st.session_state.flyer_image_url
-        st.success("Flyer ready for FAQ generation")
+        st.success(f"{visual_type_display} ready for FAQ generation")
 
 if st.session_state.get("final_title"):
-    st.markdown("## FAQs & Refund Policy Generation")
+    st.markdown("## FAQs Generation")
     
     faq_use_same = st.radio(
-        "FAQ/Refund Policy Content:",
-        ["Use selected title/description/flyer from above", "Enter custom FAQ content"],
+        "FAQ Content:",
+        ["Use selected title/description from above", "Enter custom FAQ content"],
         key="faq_use_same",
-        help="Choose whether to use the selected content from above or enter custom content for FAQs and refund policy."
+        help="Choose whether to use the selected content from above or enter custom content for FAQs."
     )
     
     with st.form("faq_form", clear_on_submit=False):
-        if faq_use_same == "Use selected title/description/flyer from above":
-            faq_title = st.text_input("FAQ/Refund Policy Title", value=st.session_state.final_title, key="faq_title_input", disabled=True)
-            faq_description = st.text_area("FAQ/Refund Policy Description", value=st.session_state.get("final_description", st.session_state.get("description", "")), key="faq_desc_input", disabled=True)
+        if faq_use_same == "Use selected title/description from above":
+            faq_title = st.text_input("FAQ Title", value=st.session_state.final_title, key="faq_title_input", disabled=True)
+            faq_description = st.text_area("FAQ Description", value=st.session_state.get("final_description", st.session_state.get("description", "")), key="faq_desc_input", disabled=True)
         else:
-            faq_title = st.text_input("FAQ/Refund Policy Title", value=st.session_state.final_title, key="faq_title_input_custom")
-            faq_description = st.text_area("FAQ/Refund Policy Description", value=st.session_state.get("final_description", ""), key="faq_desc_input_custom")
+            faq_title = st.text_input("FAQ Title", value=st.session_state.final_title, key="faq_title_input_custom")
+            faq_description = st.text_area("FAQ Description", value=st.session_state.get("final_description", ""), key="faq_desc_input_custom")
         
         col1, col2, col3 = st.columns(3)
         with col1:
-            faq_category = st.selectbox("FAQ/Refund Policy Category", category_options, index=0, key="faq_category")
+            faq_category = st.selectbox("FAQ Category", CATEGORY_OPTIONS, index=0, key="faq_category")
             if faq_category == "Other":
                 custom_faq_category = st.text_input("Custom category", key="custom_faq_category")
                 if custom_faq_category:
-                    suggestion = fuzzy_correct(custom_faq_category, category_options[1:-1])
+                    suggestion = fuzzy_correct(custom_faq_category, CATEGORY_OPTIONS[1:-1])
                     if suggestion != custom_faq_category:
                         st.info(f"Did you mean: {suggestion}?")
         
         with col2:
-            faq_event_type = st.selectbox("FAQ/Refund Policy Event Type", event_type_options + ["Gala"], index=0, key="faq_event_type")
+            faq_event_type = st.selectbox("FAQ Event Type", EVENT_TYPE_OPTIONS + ["Gala"], index=0, key="faq_event_type")
             if faq_event_type == "Other":
                 custom_faq_event_type = st.text_input("Custom event type", key="custom_faq_event_type")
                 if custom_faq_event_type:
-                    suggestion = fuzzy_correct(custom_faq_event_type, event_type_options[1:-1])
+                    suggestion = fuzzy_correct(custom_faq_event_type, EVENT_TYPE_OPTIONS[1:-1])
                     if suggestion != custom_faq_event_type:
                         st.info(f"Did you mean: {suggestion}?")
         
         with col3:
-            faq_tone = st.selectbox("FAQ/Refund Policy Tone", tone_options + ["Playful"], index=0, key="faq_tone")
+            faq_tone = st.selectbox("FAQ Tone", TONE_OPTIONS + ["Playful"], index=0, key="faq_tone")
             if faq_tone == "Other":
                 custom_faq_tone = st.text_input("Custom tone", key="custom_faq_tone")
                 if custom_faq_tone:
-                    suggestion = fuzzy_correct(custom_faq_tone, tone_options[1:-1] + ["Playful"])
+                    suggestion = fuzzy_correct(custom_faq_tone, TONE_OPTIONS[1:-1] + ["Playful"])
                     if suggestion != custom_faq_tone:
                         st.info(f"Did you mean: {suggestion}?")
         
-        faq_context = st.text_input("FAQ/Refund Policy Context (optional)", value="", key="faq_context")
-        faq_cost_mode = st.selectbox("FAQ/Refund Policy Cost Mode", ["balanced", "economy", "premium"], key="faq_cost_mode")
-        generate_faq_btn = st.form_submit_button("Generate FAQs & Refund Policy")
+        faq_context = st.text_input("FAQ Context (optional)", value=get_combined_context() or "", key="faq_context")
+        faq_cost_mode = st.selectbox("FAQ Cost Mode", ["balanced", "economy", "premium"], key="faq_cost_mode")
+        generate_faq_btn = st.form_submit_button("Generate FAQs")
 
     if generate_faq_btn:
-        with st.spinner("Generating FAQs and refund policy with advanced prompt engineering..."):
+        with st.spinner("Generating FAQs with advanced prompt engineering..."):
             try:
                 final_faq_category = custom_faq_category if faq_category == "Other" and 'custom_faq_category' in locals() and custom_faq_category else faq_category
                 final_faq_event_type = custom_faq_event_type if faq_event_type == "Other" and 'custom_faq_event_type' in locals() and custom_faq_event_type else faq_event_type
                 final_faq_tone = custom_faq_tone if faq_tone == "Other" and 'custom_faq_tone' in locals() and custom_faq_tone else faq_tone
                 
-                faqs, refund_policy, faq_logs = generate_faqs_and_refund_policy(
+                combined_context = get_combined_context()
+                
+                faqs, faq_logs = generate_faqs(
                     faq_title if faq_title else "Event Title",
                     faq_description if faq_description else "A professional event.",
                     final_faq_category if final_faq_category != "Select event category" else "Business",
                     final_faq_event_type if final_faq_event_type != "Select event type" else "Conference",
                     final_faq_tone if final_faq_tone != "Select tone of event" else "Professional",
-                    faq_context if faq_context else None,
+                    combined_context,
                     faq_cost_mode
                 )
                 st.session_state.faqs = faqs
-                st.session_state.refund_policy = refund_policy
                 st.session_state.faq_logs = faq_logs
             except Exception as e:
-                st.error(f"Error generating FAQs/refund policy: {str(e)}")
+                st.error(f"Error generating FAQs: {str(e)}")
                 st.error("Please try again or check your API key.")
 
     if st.session_state.get("faqs"):
@@ -584,6 +708,9 @@ if st.session_state.get("final_title"):
             with st.expander(f"Q{i}: {faq['question']}"):
                 st.markdown(f"**A:** {faq['answer']}")
         st.download_button("Download FAQs", "\n\n".join([f"Q: {f['question']}\nA: {f['answer']}" for f in st.session_state.faqs]), file_name="event_faqs.txt", mime="text/plain", key="download_faqs_btn")
+        
+        display_current_context()
+        show_context_input("FAQ Generation", "faq")
         
         st.markdown("### Customize Your FAQs:")
         faq_options = ["Use generated FAQs as-is", "Edit generated FAQs", "Add my own FAQs", "Mix generated and custom FAQs"]
@@ -643,10 +770,99 @@ if st.session_state.get("final_title"):
                 st.session_state.final_faqs = mixed_faqs
                 st.success(f"Using {len(selected_generated)} generated + {len(additional_faqs)} custom FAQs = {len(mixed_faqs)} total FAQs")
 
+if st.session_state.get("final_title"):
+    st.markdown("## Refund Policy Generation")
+    
+    refund_use_same = st.radio(
+        "Refund Policy Content:",
+        ["Use selected title/description from above", "Enter custom refund policy content"],
+        key="refund_use_same",
+        help="Choose whether to use the selected content from above or enter custom content for refund policy."
+    )
+    
+    with st.form("refund_form", clear_on_submit=False):
+        if refund_use_same == "Use selected title/description from above":
+            refund_title = st.text_input("Refund Policy Title", value=st.session_state.final_title, key="refund_title_input", disabled=True)
+            refund_description = st.text_area("Refund Policy Description", value=st.session_state.get("final_description", st.session_state.get("description", "")), key="refund_desc_input", disabled=True)
+        else:
+            refund_title = st.text_input("Refund Policy Title", value=st.session_state.final_title, key="refund_title_input_custom")
+            refund_description = st.text_area("Refund Policy Description", value=st.session_state.get("final_description", ""), key="refund_desc_input_custom")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            refund_category = st.selectbox("Refund Policy Category", CATEGORY_OPTIONS, index=0, key="refund_category")
+            if refund_category == "Other":
+                custom_refund_category = st.text_input("Custom category", key="custom_refund_category")
+                if custom_refund_category:
+                    suggestion = fuzzy_correct(custom_refund_category, CATEGORY_OPTIONS[1:-1])
+                    if suggestion != custom_refund_category:
+                        st.info(f"Did you mean: {suggestion}?")
+        
+        with col2:
+            refund_event_type = st.selectbox("Refund Policy Event Type", EVENT_TYPE_OPTIONS + ["Gala"], index=0, key="refund_event_type")
+            if refund_event_type == "Other":
+                custom_refund_event_type = st.text_input("Custom event type", key="custom_refund_event_type")
+                if custom_refund_event_type:
+                    suggestion = fuzzy_correct(custom_refund_event_type, EVENT_TYPE_OPTIONS[1:-1])
+                    if suggestion != custom_refund_event_type:
+                        st.info(f"Did you mean: {suggestion}?")
+        
+        with col3:
+            refund_tone = st.selectbox("Refund Policy Tone", TONE_OPTIONS + ["Playful"], index=0, key="refund_tone")
+            if refund_tone == "Other":
+                custom_refund_tone = st.text_input("Custom tone", key="custom_refund_tone")
+                if custom_refund_tone:
+                    suggestion = fuzzy_correct(custom_refund_tone, TONE_OPTIONS[1:-1] + ["Playful"])
+                    if suggestion != custom_refund_tone:
+                        st.info(f"Did you mean: {suggestion}?")
+        
+        refund_context = st.text_input("Refund Policy Context (optional)", value=get_combined_context() or "", key="refund_context")
+        refund_cost_mode = st.selectbox("Refund Policy Cost Mode", ["balanced", "economy", "premium"], key="refund_cost_mode")
+        generate_refund_btn = st.form_submit_button("Generate Refund Policy")
+
+    if generate_refund_btn:
+        with st.spinner("Generating refund policy with advanced prompt engineering..."):
+            try:
+                final_refund_category = custom_refund_category if refund_category == "Other" and 'custom_refund_category' in locals() and custom_refund_category else refund_category
+                final_refund_event_type = custom_refund_event_type if refund_event_type == "Other" and 'custom_refund_event_type' in locals() and custom_refund_event_type else refund_event_type
+                final_refund_tone = custom_refund_tone if refund_tone == "Other" and 'custom_refund_tone' in locals() and custom_refund_tone else refund_tone
+                
+                combined_context = get_combined_context()
+                
+                refund_policy, refund_logs = generate_refund_policy(
+                    refund_title if refund_title else "Event Title",
+                    refund_description if refund_description else "A professional event.",
+                    final_refund_category if final_refund_category != "Select event category" else "Business",
+                    final_refund_event_type if final_refund_event_type != "Select event type" else "Conference",
+                    final_refund_tone if final_refund_tone != "Select tone of event" else "Professional",
+                    combined_context,
+                    refund_cost_mode
+                )
+                st.session_state.refund_policy = refund_policy
+                st.session_state.refund_logs = refund_logs
+            except Exception as e:
+                st.error(f"Error generating refund policy: {str(e)}")
+                st.error("Please try again or check your API key.")
+
     if st.session_state.get("refund_policy"):
         st.markdown("### Generated Refund Policy:")
-        st.markdown(f'<div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border-left: 4px solid #2563eb; color: #333;">{st.session_state.refund_policy}</div>', unsafe_allow_html=True)
+        
+
+        policy_text = st.session_state.refund_policy
+        policy_sentences = [sentence.strip() for sentence in policy_text.replace('.', '.|').split('|') if sentence.strip()]
+        
+        formatted_policy = ""
+        for sentence in policy_sentences:
+            if sentence and not sentence.isspace():
+                clean_sentence = sentence.strip().rstrip('.')
+                if clean_sentence:
+                    formatted_policy += f"• {clean_sentence}\n"
+        
+        st.markdown(f'<div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #2563eb; color: #333; line-height: 1.6;"><strong>Refund Policy:</strong><br/><br/>{formatted_policy.replace(chr(10), "<br/>")}</div>', unsafe_allow_html=True)
         st.download_button("Download Refund Policy", st.session_state.refund_policy, file_name="event_refund_policy.txt", mime="text/plain", key="download_refund_btn")
+        
+        display_current_context()
+        show_context_input("Refund Policy Generation", "refund")
         
         st.markdown("### Customize Refund Policy:")
         refund_options = ["Use generated refund policy", "Edit refund policy", "Write my own refund policy"]
@@ -670,10 +886,35 @@ if st.session_state.get("final_title"):
                 st.session_state.final_refund_policy = custom_refund
                 st.success("Using custom refund policy")
         
+        if st.session_state.get("refund_logs"):
+            show_refund_analytics = st.button("View Refund Policy Generation Analytics", key="refund_analytics_btn")
+            if show_refund_analytics:
+                st.markdown("### Refund Policy Generation Analytics")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Prompt Tokens", st.session_state.refund_logs.get('Prompt tokens', 'N/A'))
+                    st.metric("Total Tokens", st.session_state.refund_logs.get('Total tokens', 'N/A'))
+                with col2:
+                    st.metric("Completion Tokens", st.session_state.refund_logs.get('Completion tokens', 'N/A'))
+                    st.metric("Generation Time", f"{st.session_state.refund_logs.get('Time taken (s)', 'N/A')}s")
+                st.metric("Cost", st.session_state.refund_logs.get('Estimated cost ($)', 'N/A'))
+                st.markdown(f"**Model Used:** {st.session_state.refund_logs.get('Model', 'gpt-3.5-turbo')}")
+                with st.expander("Show Prompt Preview"):
+                    st.markdown(f"""
+**System Prompt:**
+```
+{st.session_state.refund_logs.get('System prompt', '')}
+```
+**User Prompt:**
+```
+{st.session_state.refund_logs.get('Prompt', '')}
+```
+""", unsafe_allow_html=True)
+        
         if st.session_state.faq_logs:
-            show_faq_analytics = st.button("View FAQ/Refund Generation Analytics", key="faq_analytics_btn")
+            show_faq_analytics = st.button("View FAQ Generation Analytics", key="faq_analytics_btn")
             if show_faq_analytics:
-                st.markdown("### FAQ/Refund Generation Analytics")
+                st.markdown("### FAQ Generation Analytics")
                 col1, col2 = st.columns(2)
                 with col1:
                     st.metric("Prompt Tokens", st.session_state.faq_logs.get('Prompt tokens', 'N/A'))
@@ -735,12 +976,12 @@ if content_complete:
         st.markdown("---")
         
         st.markdown("## REFUND POLICY")
-        policy_lines = st.session_state.final_refund_policy.split('. ')
-        for line in policy_lines:
-            if line.strip():
-                clean_line = line.strip().rstrip('.')
-                if clean_line:
-                    st.markdown(f"• {clean_line}")
+        policy_sentences = [sentence.strip() for sentence in st.session_state.final_refund_policy.replace('.', '.|').split('|') if sentence.strip()]
+        for sentence in policy_sentences:
+            if sentence and not sentence.isspace():
+                clean_sentence = sentence.strip().rstrip('.')
+                if clean_sentence:
+                    st.markdown(f"• {clean_sentence}")
         
         st.markdown("---")
         
@@ -756,7 +997,7 @@ FREQUENTLY ASKED QUESTIONS:
 {chr(10).join([f"• Q{i}: {faq['question']}{chr(10)}  Answer: {faq['answer']}{chr(10)}" for i, faq in enumerate(st.session_state.final_faqs, 1)])}
 
 REFUND POLICY:
-{chr(10).join([f"• {line.strip().rstrip('.')}" for line in st.session_state.final_refund_policy.split('.') if line.strip()])}
+{chr(10).join([f"• {sentence.strip().rstrip('.')}" for sentence in st.session_state.final_refund_policy.replace('.', '.|').split('|') if sentence.strip() and not sentence.isspace()])}
 
 FLYER URL:
 {st.session_state.final_flyer}
@@ -771,4 +1012,38 @@ FLYER URL:
         )
 
 st.markdown("---")
-st.markdown("**Ready for Flask integration:** This system supports sequential content generation with user selection at each step.")
+
+with st.expander("System Performance Analytics", expanded=False):
+    st.markdown("### Global Performance Metrics")
+    
+    try:
+        analytics_data = get_global_analytics()
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Requests", analytics_data["total_requests"])
+            st.metric("Cache Hit Rate", analytics_data["cache_hit_rate"])
+        with col2:
+            st.metric("Total Cost", analytics_data["total_cost"])
+            st.metric("Cost Savings", analytics_data["cost_savings"])
+        with col3:
+            st.metric("Avg Response Time", analytics_data["avg_response_time"])
+            st.metric("Error Rate", analytics_data["error_rate"])
+        with col4:
+            st.metric("Efficiency Score", analytics_data["efficiency_score"])
+            st.metric("Total Tokens", analytics_data["total_tokens"])
+        
+        st.markdown("### Optimization Recommendations")
+        for rec in analytics_data["recommendations"]:
+            st.info(f"• {rec}")
+        
+        if st.button("Reset Analytics", key="reset_analytics"):
+            reset_analytics()
+            st.success("Analytics reset successfully!")
+            st.rerun()
+            
+    except Exception as e:
+        st.error(f"Analytics unavailable: {str(e)}")
+
+st.markdown("---")
+st.markdown("**Optimized for Scale:** Advanced caching, prompt optimization, and performance analytics for cost-effective scaling.")

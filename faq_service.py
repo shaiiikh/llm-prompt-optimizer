@@ -1,8 +1,8 @@
-from event_llm_core import generate_flyer_image
+from event_llm_core import generate_faqs
 import argparse
 
 def main():
-    parser = argparse.ArgumentParser(description="Event Flyer/Banner Generation Service")
+    parser = argparse.ArgumentParser(description="Event FAQ Generation Service")
     parser.add_argument('--title', required=True, help='Event title')
     parser.add_argument('--description', required=True, help='Event description')
     parser.add_argument('--category', required=True, help='Event category')
@@ -10,17 +10,20 @@ def main():
     parser.add_argument('--tone', required=True, help='Tone of the event')
     parser.add_argument('--context', required=False, default=None, help='Optional context')
     parser.add_argument('--cost_mode', choices=['economy', 'balanced', 'premium'], default='balanced', help='Cost/quality mode')
+    
     args = parser.parse_args()
-    print(f"[Flyer Service] Generating flyer/banner image")
-    print(f"[Flyer Service] Title: {args.title}")
-    print(f"[Flyer Service] Description: {args.description}")
-    print(f"[Flyer Service] Category: {args.category}")
-    print(f"[Flyer Service] Event Type: {args.event_type}")
-    print(f"[Flyer Service] Tone: {args.tone}")
-    print(f"[Flyer Service] Context: {args.context}")
-    print(f"[Flyer Service] Cost Mode: {args.cost_mode}")
+    
+    print(f"[FAQ Service] Generating FAQs")
+    print(f"[FAQ Service] Title: {args.title}")
+    print(f"[FAQ Service] Description: {args.description}")
+    print(f"[FAQ Service] Category: {args.category}")
+    print(f"[FAQ Service] Event Type: {args.event_type}")
+    print(f"[FAQ Service] Tone: {args.tone}")
+    print(f"[FAQ Service] Context: {args.context}")
+    print(f"[FAQ Service] Cost Mode: {args.cost_mode}")
     print("-" * 50)
-    image_url, logs = generate_flyer_image(
+    
+    faqs, logs = generate_faqs(
         args.title,
         args.description,
         args.category,
@@ -29,11 +32,16 @@ def main():
         args.context,
         args.cost_mode
     )
-    print("[Flyer Service] Generation Logs:")
+    
+    print("[FAQ Service] Generation Logs:")
     for k, v in logs.items():
         print(f"  {k}: {v}")
-    print(f"[Flyer Service] Generated Flyer/Banner Image URL:")
-    print(f"  {image_url}")
+    
+    print(f"[FAQ Service] Generated {len(faqs)} FAQs:")
+    for i, faq in enumerate(faqs, 1):
+        print(f"  Q{i}: {faq['question']}")
+        print(f"  A{i}: {faq['answer']}")
+        print()
 
 if __name__ == "__main__":
     main() 
