@@ -46,4 +46,8 @@ Thumbs.db
 *.log
 
 # Streamlit
-.streamlit/ 
+.streamlit/
+
+# Cache
+cache/
+*.pkl
