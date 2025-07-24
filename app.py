@@ -614,22 +614,22 @@ if st.session_state.get("final_title"):
                 
                 if "Flyer" in visual_type:
                     image_url, visual_logs = generate_flyer_image(
-                        visual_title if visual_title else "Event Title",
-                        visual_description if visual_description else "A professional event.",
-                        final_visual_category if final_visual_category != "Select event category" else "Business",
-                        final_visual_event_type if final_visual_event_type != "Select event type" else "Conference",
-                        final_visual_tone if final_visual_tone != "Select tone of event" else "Professional",
+                        visual_title,
+                        visual_description,
+                        final_visual_category,
+                        final_visual_event_type,
+                        final_visual_tone,
                         combined_context,
                         visual_cost_mode,
                         visual_image_size.split()[0]
                     )
                 else:
                     image_url, visual_logs = generate_banner_image(
-                        visual_title if visual_title else "Event Title",
-                        visual_description if visual_description else "A professional event.",
-                        final_visual_category if final_visual_category != "Select event category" else "Business",
-                        final_visual_event_type if final_visual_event_type != "Select event type" else "Conference",
-                        final_visual_tone if final_visual_tone != "Select tone of event" else "Professional",
+                        visual_title,
+                        visual_description,
+                        final_visual_category,
+                        final_visual_event_type,
+                        final_visual_tone,
                         combined_context,
                         visual_cost_mode,
                         visual_image_size.split()[0]
@@ -747,9 +747,9 @@ if st.session_state.get("final_title"):
                 faqs, faq_logs = generate_faqs(
                     faq_title,
                     faq_description,
-                    final_faq_category if final_faq_category != "Select event category" else "Business",
-                    final_faq_event_type if final_faq_event_type != "Select event type" else "Conference",
-                    final_faq_tone if final_faq_tone != "Select tone of event" else "Professional",
+                    final_faq_category,
+                    final_faq_event_type,
+                    final_faq_tone,
                     combined_context,
                     faq_cost_mode
                 )
