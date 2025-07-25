@@ -2,7 +2,7 @@
 
 > **Professional AI-powered event content generation platform with advanced caching, prompt optimization, and performance analytics.**
 
-## 🚀 Features
+## Features
 
 ### Core Capabilities
 - **Multi-format Content Generation**: Titles, descriptions, flyers, banners, FAQs, and refund policies
@@ -108,7 +108,7 @@ python faq_service.py --title "AI Innovation Summit" --description "Premier AI e
 python refund_policy_service.py --title "AI Innovation Summit" --description "Premier AI event" --category "Technology" --event_type "Conference" --tone "Professional" --context "Standard business conference terms"
 ```
 
-## 🎯 Cost Optimization Modes
+## Cost Optimization Modes
 
 ### Economy Mode
 - **Cost Reduction**: ~40% lower costs
@@ -195,4 +195,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Ready for production deployment with enterprise-grade performance optimization and comprehensive analytics.** 🚀
+**Ready for production deployment with enterprise-grade performance optimization and comprehensive analytics.**

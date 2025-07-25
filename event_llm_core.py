@@ -281,11 +281,12 @@ def generate_titles(category, event_type, tone, num_titles=5, context=None, cost
         return [], {"errors": errors, "warnings": warnings}
     
     num_titles = max(1, min(int(num_titles), 5))
-    diversity_instruction = "Each title must be unique, creative, and use different wording. Avoid repeating phrases or structures."
+    diversity_instruction = "Each title must be unique, creative, and use different wording. Avoid repeating phrases or structures. No emojis or decorative symbols."
     
     if cost_mode == "economy":
-        system_msg = f"Generate {num_titles} creative, unique {tone.lower()} event titles for {category} {event_type}. 3-6 words each, no colons. JSON format. {diversity_instruction}"
-        user_msg = f"Create {num_titles} unique, creative titles for {category} {event_type} ({tone})"
+        context_str = f" Focus: {context}" if context else ""
+        system_msg = f"Generate {num_titles} creative, unique {tone.lower()} event titles for {category} {event_type}. 3-6 words each, no colons. JSON format. {diversity_instruction}{context_str}"
+        user_msg = f"Create {num_titles} unique, creative titles for {category} {event_type} ({tone}){context_str}"
         max_tokens = 15 * num_titles + 40
         temperature = 0.85
     elif cost_mode == "premium":
@@ -471,10 +472,11 @@ Examples: {examples[0]}, {examples[1]}{context_str}"""
 def generate_description(title, category, event_type, tone, context=None, max_chars=5000, cost_mode="balanced"):
     max_chars = max(100, min(int(max_chars), 5000))
     
-    end_instruction = "Do not stop until you reach the character limit. End with a strong call-to-action. Avoid repeating phrases. Use varied sentence structures."
+    end_instruction = "Write in flowing paragraphs without bullet points or numbered lists. Use natural transitions between ideas. End with a strong call-to-action. No emojis or decorative symbols."
     if cost_mode == "economy":
-        system_msg = f"Write compelling {tone.lower()} description for '{title}' - {category} {event_type}. EXACTLY {max_chars} characters. Include benefits and call-to-action. Use all available space. {end_instruction}"
-        user_msg = f"Description for: {title} ({category} {event_type}, {tone}) (MUST be {max_chars} characters)"
+        context_str = f" Focus: {context}" if context else ""
+        system_msg = f"Write compelling {tone.lower()} description for '{title}' - {category} {event_type}. EXACTLY {max_chars} characters. Include benefits and call-to-action. Use all available space. {end_instruction}{context_str}"
+        user_msg = f"Description for: {title} ({category} {event_type}, {tone}) (MUST be {max_chars} characters){context_str}"
         max_tokens = int(max_chars/2.8) + 50
         temperature = 0.7
     elif cost_mode == "premium":
@@ -624,7 +626,8 @@ def generate_faqs(title, description, category, event_type, tone, context=None, 
         f"1. Create at least 5 FAQs that directly address likely questions about this specific event\n"
         f"2. Make answers informative, helpful, and in a {tone.lower()} tone\n"
         f"3. Focus on practical questions attendees would actually ask\n"
-        f"4. Include questions about logistics, content, requirements, and benefits\n\n"
+        f"4. Include questions about logistics, content, requirements, and benefits\n"
+        f"5. Use professional language without emojis or decorative symbols\n\n"
         f"Example FAQ format:\n"
         f"Q: What is the dress code for the event?\nA: Business casual attire is recommended.\n"
         f"Q: Will meals be provided?\nA: Yes, lunch and refreshments will be served.\n\n"
@@ -722,7 +725,8 @@ def generate_refund_policy(title, description, category, event_type, tone, conte
         f"2. Include specific timeframes for different refund percentages\n"
         f"3. Address ticket transfers and cancellation procedures\n"
         f"4. Use a {tone.lower()} tone while maintaining legal clarity\n"
-        f"5. Consider the event category and type when setting terms\n\n"
+        f"5. Consider the event category and type when setting terms\n"
+        f"6. Use professional language without emojis or decorative symbols\n\n"
         f"Example policy structure:\n"
         f"Full refunds available up to X days before the event. Partial refunds available between X and Y days. No refunds within Y days. Transfer policies and contact information.\n\n"
         f"Generate a comprehensive refund policy for this {event_type}:"
@@ -764,10 +768,10 @@ def get_flyer_examples(category, event_type, tone):
         {"title": "Art & Culture Fest", "description": "A vibrant celebration of art, music, and culture for all ages.", "category": "Arts & Culture", "event_type": "Festival", "tone": "Creative", "style": "Realistic artistic textures, vibrant color palette, professional photography style, bold readable typography, creative composition with clear text hierarchy"},
         {"title": "Business Growth Workshop", "description": "Unlock new strategies for business expansion and leadership.", "category": "Business", "event_type": "Workshop", "tone": "Professional", "style": "Corporate photorealistic design, professional blue and gray tones, 3D upward arrows, crystal clear title text, sophisticated layout, high-end business aesthetic"},
         {"title": "Health & Wellness Expo", "description": "Discover the latest in health, fitness, and wellness trends.", "category": "Health", "event_type": "Exhibition", "tone": "Friendly", "style": "Fresh photorealistic design, natural green and white palette, realistic wellness imagery, clear readable fonts, professional healthcare aesthetic"},
-        {"title": "Kids Science Fair", "description": "A fun, interactive science fair for children and families.", "category": "Education", "event_type": "Exhibition", "tone": "Playful", "style": "Bright photorealistic design, playful yet clear typography, fun color palette, educational elements, child-friendly but professional quality"},
+        {"title": "Kids Science Fair", "description": "An interactive science fair for children and families.", "category": "Education", "event_type": "Exhibition", "tone": "Playful", "style": "Bright photorealistic design, playful yet clear typography, educational elements, child-friendly but professional quality"},
         {"title": "Luxury Gala Night", "description": "An exclusive evening gala for charity and networking.", "category": "Business", "event_type": "Gala", "tone": "Premium", "style": "Ultra-premium photorealistic design, elegant gold and black palette, luxury textures, sophisticated typography, high-end event aesthetic"},
         {"title": "Startup Pitch Meetup", "description": "Pitch your startup to investors and network with founders.", "category": "Business", "event_type": "Meetup", "tone": "Innovative", "style": "Modern photorealistic design, innovative blue and orange palette, tech-forward elements, clear professional typography, startup-friendly aesthetic"},
-        {"title": "Sports Fan Fest", "description": "A festival for sports fans with games, food, and fun.", "category": "Sports", "event_type": "Festival", "tone": "Casual", "style": "Dynamic photorealistic design, energetic team colors, sports photography style, bold readable text, festival atmosphere with professional quality"},
+        {"title": "Sports Fan Fest", "description": "A festival for sports fans with games and food.", "category": "Sports", "event_type": "Festival", "tone": "Casual", "style": "Dynamic photorealistic design, energetic team colors, sports photography style, bold readable text, festival atmosphere with professional quality"},
     ]
     filtered = [ex for ex in examples if ex["category"] == category and ex["event_type"] == event_type and ex["tone"] == tone]
     if filtered:
@@ -784,7 +788,7 @@ def get_dynamic_style(category, event_type, tone):
     if category == "Business" and event_type == "Gala":
         return "Ultra-premium photorealistic design, elegant gold and black palette, luxury textures, crystal clear sophisticated typography, high-end event aesthetic"
     if category == "Education" and tone == "Playful":
-        return "Bright photorealistic design, playful yet readable typography, fun color palette, educational elements, child-friendly but professional quality"
+        return "Bright photorealistic design, playful yet readable typography, educational elements, child-friendly but professional quality"
     if category == "Technology":
         return "Photorealistic futuristic design, sleek blue tones, 3D digital elements, modern clean layout, crystal clear bold text, tech-forward aesthetic"
     if category == "Sports":
@@ -799,6 +803,8 @@ def get_dynamic_style(category, event_type, tone):
 
 def extract_event_details(context):
     """Extract specific event details from context"""
+    import re
+    
     details = {
         'time': None,
         'date': None,
@@ -815,42 +821,51 @@ def extract_event_details(context):
     
     context_lower = context.lower()
     
-    time_keywords = ['time', 'pm', 'am', 'o\'clock', 'hours', 'at ']
-    for keyword in time_keywords:
-        if keyword in context_lower:
-            words = context.split()
-            for i, word in enumerate(words):
-                if keyword in word.lower() and i > 0:
-                    details['time'] = ' '.join(words[max(0, i-2):i+3])
-                    break
+    time_pattern = r'\b(\d{1,2}:\d{2}\s?(?:am|pm)|\d{1,2}\s?(?:am|pm)|\d{1,2}:\d{2})\b'
+    time_match = re.search(time_pattern, context_lower)
+    if time_match:
+        details['time'] = time_match.group(1)
     
-    if any(word in context_lower for word in ['online', 'virtual', 'zoom', 'webinar', 'remote']):
+    if any(word in context_lower for word in ['online', 'virtual', 'zoom', 'webinar', 'remote', 'digital', 'streaming', 'livestream']):
         details['online_offline'] = 'online'
-    elif any(word in context_lower for word in ['venue', 'hall', 'center', 'hotel', 'location', 'address']):
+    elif any(word in context_lower for word in ['onsite', 'venue', 'hall', 'center', 'hotel', 'location', 'address', 'auditorium', 'conference center', 'convention', 'in-person', 'physical']):
         details['online_offline'] = 'offline'
     
-    timezones = ['pst', 'est', 'gmt', 'utc', 'pakistan time', 'pkt', 'ist', 'cet']
-    for tz in timezones:
-        if tz in context_lower:
-            details['timezone'] = tz.upper()
-            break
+    timezone_pattern = r'\b(pst|est|gmt|utc|pakistan time|pkt|ist|cet|cst|mst|pdt|edt)\b'
+    tz_match = re.search(timezone_pattern, context_lower)
+    if tz_match:
+        tz = tz_match.group(1)
+        details['timezone'] = tz.upper() if tz != 'pakistan time' else 'PKT'
     
-    speaker_keywords = ['speaker', 'presenter', 'host', 'keynote', 'guest']
-    for keyword in speaker_keywords:
-        if keyword in context_lower:
-            details['speakers'] = f"Featured {keyword}s mentioned"
-            break
+    name_pattern = r'\b(?:speaker|presenter|host|keynote|guest|featuring|with)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*?)(?:\s+(?:at|in|on|will|is|presenter|speaker)|\b)'
+    name_match = re.search(name_pattern, context, re.IGNORECASE)
+    if name_match:
+        details['speakers'] = name_match.group(1).strip()
+    else:
+        capitalized_names = re.findall(r'\b[A-Z][a-z]+\s+[A-Z][a-z]+\b', context)
+        if capitalized_names:
+            clean_names = []
+            for name in capitalized_names:
+                if not any(word in name.lower() for word in ['team', 'conference', 'meeting', 'event', 'summit', 'pakistan', 'cricket']):
+                    clean_names.append(name)
+            if clean_names:
+                details['speakers'] = clean_names[0]
     
-    date_keywords = ['date', 'day', 'january', 'february', 'march', 'april', 'may', 'june', 
-                     'july', 'august', 'september', 'october', 'november', 'december']
-    for keyword in date_keywords:
-        if keyword in context_lower:
-            words = context.split()
-            for i, word in enumerate(words):
-                if keyword in word.lower():
-                    details['date'] = ' '.join(words[max(0, i-1):i+3])
-                    break
-            break
+    date_pattern = r'\b(\d{1,2}(?:st|nd|rd|th)?\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)|\b(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{1,2}(?:st|nd|rd|th)?)\b'
+    date_match = re.search(date_pattern, context_lower)
+    if date_match:
+        details['date'] = date_match.group(1)
+    
+    city_pattern = r'\b(?:in|at|location|venue)\s+([A-Z][a-z]+)(?:\s+(?:on|at|during|for)|\b)'
+    city_match = re.search(city_pattern, context, re.IGNORECASE)
+    if city_match:
+        details['location'] = city_match.group(1)
+    else:
+        major_cities = ['karachi', 'lahore', 'islamabad', 'dubai', 'mumbai', 'delhi', 'london', 'new york', 'singapore', 'tokyo', 'paris', 'berlin', 'sydney', 'toronto', 'chicago']
+        for city in major_cities:
+            if city in context_lower:
+                details['location'] = city.title()
+                break
     
     return details
 
@@ -880,20 +895,40 @@ def generate_flyer_image(title, description, category, event_type, tone, context
         "- All text must be PERFECTLY READABLE from 3 feet away\n"
     )
     
-    event_info_integration = ""
-    if event_details['time'] or event_details['date']:
-        event_info_integration += f"MUST INCLUDE ON FLYER:\n"
-        if event_details['time']:
-            event_info_integration += f"- TIME: {event_details['time']}\n"
+    event_info_integration = "CRITICAL: MANDATORY EVENT DETAILS - MUST BE DISPLAYED ON FLYER\n"
+    event_info_integration += "DALL-E: YOU ARE REQUIRED TO INCLUDE ALL PROVIDED DETAILS ON THE FLYER\n\n"
+    
+    has_details = event_details['time'] or event_details['date'] or event_details['speakers'] or event_details['location'] or event_details['online_offline']
+    
+    if has_details:
+        event_info_integration += "REQUIRED INFORMATION TO DISPLAY (NON-NEGOTIABLE):\n"
         if event_details['date']:
-            event_info_integration += f"- DATE: {event_details['date']}\n"
+            event_info_integration += f"DATE: {event_details['date']} (MANDATORY - Use HUGE fonts, place directly below title)\n"
+        if event_details['time']:
+            event_info_integration += f"TIME: {event_details['time']} (MANDATORY - Extra large fonts, highly visible)\n"
         if event_details['timezone']:
-            event_info_integration += f"- TIMEZONE: {event_details['timezone']}\n"
-        if event_details['online_offline']:
-            event_info_integration += f"- FORMAT: {event_details['online_offline'].upper()} event\n"
+            event_info_integration += f"TIMEZONE: {event_details['timezone']} (Display next to time)\n"
         if event_details['speakers']:
-            event_info_integration += f"- SPEAKERS: Include speaker information prominently\n"
-        event_info_integration += "Make this information PROMINENT and CLEARLY VISIBLE on the flyer.\n"
+            event_info_integration += f"SPEAKER: {event_details['speakers']} (CRITICAL - Use MASSIVE fonts, second most prominent after title)\n"
+        if event_details['location']:
+            event_info_integration += f"LOCATION: {event_details['location']} (MANDATORY - Large fonts with location icon)\n"
+        if event_details['online_offline']:
+            event_info_integration += f"FORMAT: {event_details['online_offline'].upper()} EVENT (Show with appropriate icon)\n"
+        
+        event_info_integration += "\nABSOLUTE NON-NEGOTIABLE REQUIREMENTS:\n"
+        event_info_integration += "EVERY detail listed above MUST appear on the flyer - NO EXCEPTIONS\n"
+        event_info_integration += "Use font hierarchy: Title (largest) → Speaker (massive) → Date/Time/Location (large)\n"
+        event_info_integration += "High contrast colors - white text on dark backgrounds or dark text on light\n"
+        event_info_integration += "NO detail can be omitted, hidden, or made too small to read\n"
+        event_info_integration += "If you don't include ALL these details prominently, the flyer is REJECTED\n"
+    
+    if context and not has_details:
+        event_info_integration += f"CONTEXT TO EXTRACT AND DISPLAY:\n{context}\n"
+        event_info_integration += "Parse this text and extract ANY event details (names, dates, times, locations)\n"
+        event_info_integration += "Make ALL extracted information HIGHLY visible on the flyer\n"
+    elif context:
+        event_info_integration += f"\nADDITIONAL CONTEXT:\n{context}\n"
+        event_info_integration += "Include relevant additional details from this context\n"
     
     realism_enhancement = (
         "REALISM AND QUALITY REQUIREMENTS:\n"
@@ -911,7 +946,7 @@ def generate_flyer_image(title, description, category, event_type, tone, context
         "STRICTLY AVOID: Blurry or unreadable text, small fonts, low contrast text, "
         "text over busy backgrounds, pixelated elements, amateur design, cartoonish appearance, "
         "watermarks, irrelevant decorative elements, cluttered layout, poor spacing, "
-        "missing essential event information, unprofessional typography."
+        "missing essential event information, unprofessional typography, emojis, decorative symbols."
     )
     
     style = get_dynamic_style(category, event_type, tone)
@@ -921,24 +956,21 @@ def generate_flyer_image(title, description, category, event_type, tone, context
         "premium": f"{style}, LUXURY typography with perfect information hierarchy, ultra-realistic design, professional photography quality, perfect lighting, high-end marketing materials, crystal clear text at all levels, sophisticated premium layout."
     }
     
-    prompt = (
-        f"You are an EXPERT professional FLYER designer specializing in HIGH-QUALITY, PHOTOREALISTIC marketing flyers.\n"
-        f"{flyer_specific_requirements}\n"
-        f"{text_optimization}\n"
-        f"{event_info_integration}\n"
-        f"{realism_enhancement}\n"
-        f"Create a stunning, professional FLYER (vertical/portrait layout) that includes ALL event details.\n"
-        f"This is a FLYER (not a banner) - focus on comprehensive event information display.\n"
-        f"Example Reference: {example['title']} - {example['style']}\n"
-        f"Design a premium FLYER for:\n"
-        f"EVENT TITLE: '{title}' (make this EXTRA LARGE, BOLD, and PERFECTLY READABLE)\n"
-        f"EVENT DESCRIPTION: {description}\n"
-        f"CATEGORY: {category} | EVENT TYPE: {event_type} | TONE: {tone}\n"
-        f"DESIGN REQUIREMENTS: {style_map[cost_mode]}\n"
-        f"QUALITY STANDARD: Top marketing agency flyer design\n"
-        f"ADDITIONAL CONTEXT: {context if context else 'Standard professional event'}\n"
-        f"{negative_prompt}"
+    base_prompt = (
+        f"Create a professional FLYER (portrait layout) for: '{title}' - {description}\n"
+        f"Category: {category} | Type: {event_type} | Tone: {tone}\n"
+        f"Requirements: {style_map[cost_mode]}\n"
+        f"Context: {context if context else 'Standard professional event'}\n"
+        f"CRITICAL: Include ALL event details prominently with large, readable fonts.\n"
+        f"Use high contrast colors and professional design.\n"
+        f"Focus on {category.lower()} themes and {tone.lower()} aesthetic.\n"
+        f"Ensure all text is perfectly readable and well-organized."
     )
+    
+    if len(base_prompt) > 3500:
+        base_prompt = PromptOptimizer.compress_prompt(base_prompt, 0.4)
+    
+    prompt = base_prompt
     start = time.time()
     
     cache_key = cache._get_cache_key(prompt, image_size, cost_mode, "flyer")
@@ -946,25 +978,43 @@ def generate_flyer_image(title, description, category, event_type, tone, context
     
     if cached_result:
         analytics.record_request(0, 0, time.time() - start, from_cache=True)
-        image_url = cached_result
-    else:
+        import base64
         try:
-            response = client.images.generate(
-                model="dall-e-3",
-                prompt=prompt,
-                n=1,
-                size=image_size,
-                quality="hd" if cost_mode=="premium" else "standard",
-                response_format="url"
-            )
-            image_url = response.data[0].url
-            cache.set(cache_key, image_url)
-            
-            cost = 0.04 if cost_mode=="premium" else 0.02
-            analytics.record_request(cost, count_tokens(prompt), time.time() - start)
+            image_url = base64.b64decode(cached_result)
+            print(f"Cache hit - decoded {len(image_url)} bytes")
         except Exception as e:
-            analytics.record_request(0, 0, time.time() - start, error=True)
-            return "", {"error": str(e)}
+            image_url = cached_result  # if already bytes
+            print(f"Cache hit - using cached bytes: {len(image_url) if hasattr(image_url, '__len__') else 'N/A'}")
+    else:
+        print("No cache hit - making API call")
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = client.images.generate(
+                    model="dall-e-3",
+                    prompt=prompt,
+                    n=1,
+                    size=image_size,
+                    quality="hd" if cost_mode=="premium" else "standard",
+                    response_format="b64_json"
+                )
+                image_b64 = response.data[0].b64_json
+                import base64, io
+                image_bytes = base64.b64decode(image_b64)
+                cache.set(cache_key, image_b64)  # cache b64 string
+                image_url = image_bytes
+                print(f"API call successful - generated {len(image_url)} bytes")
+                
+                cost = 0.04 if cost_mode=="premium" else 0.02
+                analytics.record_request(cost, count_tokens(prompt), time.time() - start)
+                break
+            except Exception as e:
+                print(f"DALL-E Flyer Error (attempt {attempt + 1}): {e}")
+                if attempt == max_retries - 1:
+                    analytics.record_request(0, 0, time.time() - start, error=True)
+                    print(f"All retries failed - returning empty bytes")
+                    return b"", {"error": str(e), "Time taken (s)": round(time.time() - start, 2)}
+                time.sleep(2 ** attempt)
     end = time.time()
     prompt_tokens = count_tokens(prompt)
     completion_tokens = 0
@@ -981,6 +1031,7 @@ def generate_flyer_image(title, description, category, event_type, tone, context
         "Cost mode": cost_mode,
         "Image size": image_size
     }
+    print(f"Returning image_url: type={type(image_url)}, length={len(image_url) if hasattr(image_url, '__len__') else 'N/A'}")
     return image_url, logs
 
 def generate_banner_image(title, description, category, event_type, tone, context=None, cost_mode="balanced", image_size="1792x1024"):
@@ -1010,15 +1061,21 @@ def generate_banner_image(title, description, category, event_type, tone, contex
     )
     
     event_info_integration = ""
-    if event_details['time'] or event_details['date']:
-        event_info_integration += f"INCLUDE ON BANNER (keep minimal):\n"
+    if event_details['time'] or event_details['date'] or event_details['speakers'] or event_details['location'] or event_details['online_offline']:
+        event_info_integration += f"KEY EVENT INFORMATION FOR BANNER (concise but impactful):\n"
         if event_details['date']:
-            event_info_integration += f"- DATE: {event_details['date']}\n"
+            event_info_integration += f"- DATE: {event_details['date']} (Display clearly)\n"
         if event_details['time']:
             event_info_integration += f"- TIME: {event_details['time']}\n"
+        if event_details['speakers']:
+            event_info_integration += f"- FEATURING: {event_details['speakers']} (Prominent speaker names)\n"
+        if event_details['location']:
+            event_info_integration += f"- LOCATION: {event_details['location']}\n"
         if event_details['online_offline']:
             event_info_integration += f"- FORMAT: {event_details['online_offline'].upper()}\n"
-        event_info_integration += "Keep this information CONCISE and visually integrated.\n"
+        event_info_integration += "Present this information with IMPACT and CLARITY in the banner layout. Use strategic text placement.\n"
+    elif context:
+        event_info_integration += f"CONTEXT FOR BANNER:\n- {context}\nIntegrate key details from this context into the banner design.\n"
     
     realism_enhancement = (
         "BANNER VISUAL REQUIREMENTS:\n"
@@ -1036,7 +1093,7 @@ def generate_banner_image(title, description, category, event_type, tone, contex
         "STRICTLY AVOID: Cluttered text, vertical layout elements, too much text, "
         "poor horizontal composition, low contrast, pixelated elements, amateur design, "
         "inappropriate aspect ratio usage, text that's too small for banner format, "
-        "busy backgrounds that interfere with text readability."
+        "busy backgrounds that interfere with text readability, emojis, decorative symbols."
     )
     
     style = get_dynamic_style(category, event_type, tone)
@@ -1046,24 +1103,21 @@ def generate_banner_image(title, description, category, event_type, tone, contex
         "premium": f"{style}, LUXURY banner design with cinematic quality, ultra-realistic horizontal composition, professional photography quality, perfect for high-end digital marketing, stunning visual impact."
     }
     
-    prompt = (
-        f"You are an EXPERT professional BANNER designer specializing in HIGH-QUALITY, PHOTOREALISTIC digital banners.\n"
-        f"{banner_specific_requirements}\n"
-        f"{text_optimization}\n"
-        f"{event_info_integration}\n"
-        f"{realism_enhancement}\n"
-        f"Create a stunning, professional BANNER (horizontal/landscape layout) optimized for digital display.\n"
-        f"This is a BANNER (not a flyer) - focus on visual impact and minimal text.\n"
-        f"Example Reference: {example['title']} - {example['style']} (adapted for banner format)\n"
-        f"Design a premium BANNER for:\n"
-        f"EVENT TITLE: '{title}' (make this HUGE, BOLD, and optimized for horizontal layout)\n"
-        f"EVENT DESCRIPTION: {description}\n"
-        f"CATEGORY: {category} | EVENT TYPE: {event_type} | TONE: {tone}\n"
-        f"DESIGN REQUIREMENTS: {style_map[cost_mode]}\n"
-        f"QUALITY STANDARD: Top digital marketing agency banner design\n"
-        f"ADDITIONAL CONTEXT: {context if context else 'Standard professional event'}\n"
-        f"{negative_prompt}"
+    base_prompt = (
+        f"Create a professional BANNER (landscape layout) for: '{title}' - {description}\n"
+        f"Category: {category} | Type: {event_type} | Tone: {tone}\n"
+        f"Requirements: {style_map[cost_mode]}\n"
+        f"Context: {context if context else 'Standard professional event'}\n"
+        f"CRITICAL: Include key event details with large, readable fonts.\n"
+        f"Use high contrast colors and professional design for digital display.\n"
+        f"Focus on {category.lower()} themes and {tone.lower()} aesthetic.\n"
+        f"Optimize for horizontal layout with impactful visual design."
     )
+    
+    if len(base_prompt) > 3500:
+        base_prompt = PromptOptimizer.compress_prompt(base_prompt, 0.4)
+    
+    prompt = base_prompt
     
     start = time.time()
     
@@ -1072,25 +1126,42 @@ def generate_banner_image(title, description, category, event_type, tone, contex
     
     if cached_result:
         analytics.record_request(0, 0, time.time() - start, from_cache=True)
-        image_url = cached_result
-    else:
+        import base64
         try:
-            response = client.images.generate(
-                model="dall-e-3",
-                prompt=prompt,
-                n=1,
-                size=image_size,
-                quality="hd" if cost_mode=="premium" else "standard",
-                response_format="url"
-            )
-            image_url = response.data[0].url
-            cache.set(cache_key, image_url)
-            
-            cost = 0.04 if cost_mode=="premium" else 0.02
-            analytics.record_request(cost, count_tokens(prompt), time.time() - start)
+            image_url = base64.b64decode(cached_result)
+            print(f"Banner cache hit - decoded {len(image_url)} bytes")
         except Exception as e:
-            analytics.record_request(0, 0, time.time() - start, error=True)
-            return "", {"error": str(e)}
+            image_url = cached_result  # if already bytes
+            print(f"Banner cache hit - using cached bytes: {len(image_url) if hasattr(image_url, '__len__') else 'N/A'}")
+    else:
+        print("No banner cache hit - making API call")
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = client.images.generate(
+                    model="dall-e-3",
+                    prompt=prompt,
+                    n=1,
+                    size=image_size,
+                    quality="hd" if cost_mode=="premium" else "standard",
+                    response_format="b64_json"
+                )
+                image_b64 = response.data[0].b64_json
+                import base64
+                image_bytes = base64.b64decode(image_b64)
+                cache.set(cache_key, image_b64)
+                image_url = image_bytes
+                print(f"Banner API call successful - generated {len(image_url)} bytes")
+                
+                cost = 0.04 if cost_mode=="premium" else 0.02
+                analytics.record_request(cost, count_tokens(prompt), time.time() - start)
+                break
+            except Exception as e:
+                print(f"DALL-E Banner Error (attempt {attempt + 1}): {e}")
+                if attempt == max_retries - 1:
+                    analytics.record_request(0, 0, time.time() - start, error=True)
+                    return b"", {"error": str(e), "Time taken (s)": round(time.time() - start, 2)}
+                time.sleep(2 ** attempt)
     
     end = time.time()
     
@@ -1112,6 +1183,7 @@ def generate_banner_image(title, description, category, event_type, tone, contex
         "Design type": "Banner"
     }
     
+    print(f"Returning banner image_url: type={type(image_url)}, length={len(image_url) if hasattr(image_url, '__len__') else 'N/A'}")
     return image_url, logs
 
 def get_global_analytics():
